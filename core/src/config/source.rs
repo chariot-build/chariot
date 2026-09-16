@@ -1,6 +1,9 @@
 use std::{
     collections::BTreeMap,
+    fs::{self, File},
     hash::{Hash, Hasher},
+    io::Read,
+    path::Path,
     sync::Arc,
 };
 
@@ -12,6 +15,7 @@ use crate::config::{CONFIG_VERSION, Dependencies, GlobalEnvironment, script::Scr
 pub enum SourceBase {
     Archive(Archive),
     Git(GitSource),
+    Local(LocalSource),
 }
 
 #[derive(Debug, Hash)]
@@ -38,6 +42,69 @@ pub enum ArchiveCompression {
 pub struct GitSource {
     pub url: String,
     pub revision: String,
+}
+
+#[derive(Debug)]
+pub struct LocalSource {
+    pub path: String,
+}
+
+impl Hash for LocalSource {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.path.hash(state);
+        hash_local_tree(Path::new(&self.path), state);
+    }
+}
+
+fn hash_local_tree<H: Hasher>(path: &Path, state: &mut H) {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(_) => {
+            path.hash(state);
+            return;
+        }
+    };
+
+    if metadata.is_symlink() {
+        match fs::read_link(path) {
+            Ok(target) => target.hash(state),
+            Err(_) => path.hash(state),
+        }
+        return;
+    }
+
+    if metadata.is_dir() {
+        let mut entries = match fs::read_dir(path) {
+            Ok(entries) => entries.filter_map(|entry| entry.ok()).map(|entry| entry.file_name()).collect::<Vec<_>>(),
+            Err(_) => {
+                path.hash(state);
+                return;
+            }
+        };
+
+        entries.sort();
+
+        for name in entries {
+            name.hash(state);
+            hash_local_tree(&path.join(&name), state);
+        }
+    } else if metadata.is_file() {
+        match File::open(path) {
+            Ok(mut file) => {
+                let mut buffer = [0u8; 8192];
+                loop {
+                    match file.read(&mut buffer) {
+                        Ok(0) => break,
+                        Ok(count) => state.write(&buffer[..count]),
+                        Err(_) => break,
+                    }
+                }
+            }
+            Err(_) => path.hash(state),
+        }
+    } else {
+        path.hash(state);
+    }
 }
 
 #[derive(Debug)]

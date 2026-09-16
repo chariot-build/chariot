@@ -14,6 +14,7 @@ use crate::{
     source::{
         archive::{ArchiveFetchError, fetch_archive},
         git::{GitFetchError, fetch_git_repository},
+        local::{LocalFetchError, fetch_local_source},
     },
     store::StoreEntry,
     workdir::WorkDirectory,
@@ -21,6 +22,7 @@ use crate::{
 
 mod archive;
 mod git;
+mod local;
 
 #[derive(Debug, Error)]
 pub enum SourceFetchError {
@@ -38,6 +40,9 @@ pub enum SourceFetchError {
 
     #[error(transparent)]
     Git(#[from] GitFetchError),
+
+    #[error(transparent)]
+    Local(#[from] LocalFetchError),
 
     #[error("Patch failed")]
     Patch,
@@ -57,6 +62,7 @@ pub fn fetch_source(ctx: &CoreContext, logger: &mut dyn Write, source: &Source) 
             match &source.base {
                 SourceBase::Archive(archive) => fetch_archive(ctx, logger, &archive)?,
                 SourceBase::Git(git_source) => fetch_git_repository(ctx, logger, &git_source)?,
+                SourceBase::Local(local_source) => fetch_local_source(ctx, logger, &local_source)?,
             },
             "source.base",
             base_hash,

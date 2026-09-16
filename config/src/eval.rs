@@ -9,7 +9,7 @@ use chariot_core::config::{
     Config, Dependencies, GlobalEnvironment,
     package::{Package, PackagePlatform},
     script::{Script, ScriptLanguage},
-    source::{Archive, ArchiveCompression, ArchiveKind, GitSource, Source, SourceBase, SourcePrepare},
+    source::{Archive, ArchiveCompression, ArchiveKind, GitSource, LocalSource, Source, SourceBase, SourcePrepare},
 };
 use mlua::{Error, ErrorContext, Lua, LuaOptions, StdLib, Table, UserData, Value};
 
@@ -116,6 +116,11 @@ pub fn eval_lua_config(path: &Path, global_environment: GlobalEnvironment, optio
                     let revision = base.get::<String>("revision").context("`revision` must be a string")?;
 
                     SourceBase::Git(GitSource { url, revision })
+                }
+                "local" => {
+                    let path = base.get::<String>("path").context("`path` must be a string")?;
+
+                    SourceBase::Local(LocalSource { path })
                 }
                 t => return Err(Error::runtime(format!("invalid base type `{}`", t))),
             };
