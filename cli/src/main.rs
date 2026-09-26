@@ -1,7 +1,7 @@
 use std::process::exit;
 
 use colored::{Color, Colorize};
-use log::{Level, LevelFilter, Log, error, info};
+use log::{Level, LevelFilter, Log, error};
 use nix::{
     sys::signal::{SigHandler, Signal, kill, signal},
     unistd::Pid,
@@ -38,8 +38,7 @@ impl Log for ChariotLogger {
 }
 
 extern "C" fn handle_sigint(_: nix::libc::c_int) {
-    info!("Terminated chariot process ({})", Pid::this());
-    kill(Pid::from_raw(0), Signal::SIGKILL).expect("Failed to kill process group");
+    let _ = kill(Pid::from_raw(0), Signal::SIGKILL);
     exit(1);
 }
 
