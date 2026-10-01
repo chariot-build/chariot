@@ -1,0 +1,20 @@
+[package]
+name = "buildserver"
+edition = "2024"
+version.workspace = true
+authors.workspace = true
+
+[dependencies]
+chariot_util.workspace = true
+chariot_config.workspace = true
+chariot_core.workspace = true
+chariot_rootfs.workspace = true
+git2 = { version = "0.21.0", features = ["https", "ssh", "vendored-libgit2"] }
+toml.workspace = true
+anyhow.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+axum = "0.8.9"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "fs"] }
+tower = "0.5.3"
+tower-http = { version = "0.6.2", features = ["fs"] }
