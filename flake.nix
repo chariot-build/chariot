@@ -19,6 +19,11 @@
                 default = pkgs.mkShell {
                     NIX_SHELL_NAME = "chariot";
 
+                    buildInputs = with pkgs; [
+                        pkgconf
+                        openssl
+                    ];
+
                     nativeBuildInputs = with pkgs; [
                         rustup
                         clang

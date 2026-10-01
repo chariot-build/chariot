@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chariot Build Server</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #6b6b6b;
+    --border: #e2e2e2;
+    --sidebar-bg: #f7f7f8;
+    --hover: #ececee;
+    --active-bg: #1a1a1a;
+    --active-fg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1e;
+      --fg: #eaeaea;
+      --muted: #9a9a9a;
+      --border: #333333;
+      --sidebar-bg: #171717;
+      --hover: #2a2a2a;
+      --active-bg: #eaeaea;
+      --active-fg: #1a1a1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  #sidebar h1 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 16px 16px 8px;
+    margin: 0;
+  }
+  #project-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 8px;
+  }
+  #project-list li button {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--fg);
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #project-list li button:hover {
+    background: var(--hover);
+  }
+  #project-list li button.active {
+    background: var(--active-bg);
+    color: var(--active-fg);
+  }
+  #project-list .empty,
+  #project-list .error {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+  }
+  #main h2 {
+    margin-top: 0;
+  }
+  #main .repo {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  #main .placeholder {
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+  <nav id="sidebar">
+    <h1>Projects</h1>
+    <ul id="project-list"></ul>
+  </nav>
+  <main id="main">
+    <p class="placeholder">Select a project.</p>
+  </main>
+
+  <script>
+    const listEl = document.getElementById("project-list");
+    const mainEl = document.getElementById("main");
+
+    let projects = [];
+    let activeName = null;
+
+    function render() {
+      listEl.innerHTML = "";
+
+      if (projects.length === 0) {
+        const li = document.createElement("li");
+        li.className = "empty";
+        li.textContent = "No projects configured";
+        listEl.appendChild(li);
+        return;
+      }
+
+      for (const project of projects) {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.textContent = project.name;
+        btn.className = project.name === activeName ? "active" : "";
+        btn.addEventListener("click", () => selectProject(project.name));
+        li.appendChild(btn);
+        listEl.appendChild(li);
+      }
+    }
+
+    function selectProject(name) {
+      activeName = name;
+      render();
+
+      const project = projects.find((p) => p.name === name);
+      mainEl.innerHTML = "";
+
+      const h2 = document.createElement("h2");
+      h2.textContent = project.name;
+      mainEl.appendChild(h2);
+
+      const repo = document.createElement("div");
+      repo.className = "repo";
+      repo.textContent = project.repository;
+      mainEl.appendChild(repo);
+    }
+
+    async function loadProjects() {
+      try {
+        const res = await fetch("/meta/projects");
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const data = await res.json();
+        projects = data.projects || [];
+        render();
+        if (projects.length > 0) selectProject(projects[0].name);
+      } catch (err) {
+        listEl.innerHTML = "";
+        const li = document.createElement("li");
+        li.className = "error";
+        li.textContent = `Failed to load projects: ${err.message}`;
+        listEl.appendChild(li);
+      }
+    }
+
+    loadProjects();
+  </script>
+</body>
+</html>

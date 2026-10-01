@@ -1,0 +1,200 @@
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    io::stdout,
+    iter,
+    num::NonZero,
+    path::PathBuf,
+    sync::Arc,
+    thread::available_parallelism,
+};
+
+use anyhow::{Context, Result, bail};
+use chariot_config::{DEFAULT_BASE_CONFIG_PATH, DEFAULT_LUA_CONFIG_PATH, base::read_base_config, lua::eval_lua_config};
+use chariot_core::{
+    CoreContext, DEFAULT_TARGET_PREFIX,
+    buildcache::BuildCache,
+    config::{GlobalEnvironment, package::PackagePlatform},
+    executor::{BuildManager, FailureMode},
+    graph::BuildGraphBuilder,
+    store::Store,
+    workdir::{WorkDirectory, WorkDirectoryParent},
+};
+use chariot_rootfs::{CachedPkgSet, DEFAULT_MANIFESTS_URL, ManifestFetchSpec, RootFS};
+use chariot_util::fs::{dir_entries, force_rm, force_rm_contents, join_soft, make_path};
+use git2::{FetchOptions, build::RepoBuilder};
+
+use crate::{
+    BuildServerState, REPOSITORIES_DIR, ROOTFS_DIR, STATE_FILENAME, STORE_DIR, WORKDIRS_DIR,
+    state::{ProjectState, read_state, write_state},
+    tracer::BuildServerTracer,
+};
+
+pub fn run_build(state: &Arc<BuildServerState>) -> Result<()> {
+    let state_path = state.data_dir.join(STATE_FILENAME);
+    let mut file_state = read_state(&state_path).context("Failed to read state")?;
+
+    let repos_dir = state.data_dir.join(REPOSITORIES_DIR);
+    for (name, project_config) in &state.config.projects {
+        let repo_path = repos_dir.join(&name);
+
+        make_path(&repo_path).context("Failed to make repository path")?;
+        force_rm_contents(&repo_path, None).context("Failed to clean repository path")?;
+
+        let mut fetch_options = FetchOptions::new();
+        fetch_options.depth(1);
+
+        let mut repo_builder = RepoBuilder::new();
+        repo_builder.fetch_options(fetch_options);
+        if let Some(branch) = &project_config.git_repository.branch {
+            repo_builder.branch(branch);
+        }
+
+        repo_builder.clone(&project_config.git_repository.url, &repo_path)?;
+
+        let base_config_path = join_soft(
+            &repo_path,
+            project_config
+                .base_config_path
+                .as_ref()
+                .map(|str| str.as_str())
+                .unwrap_or(DEFAULT_BASE_CONFIG_PATH),
+        );
+
+        let project_root = base_config_path.parent().unwrap_or(&repo_path);
+
+        let base_config = read_base_config(&base_config_path).context("Failed to read base config")?;
+
+        file_state
+            .projects
+            .entry(name.clone())
+            .and_modify(|state| state.rootfs_hash = base_config.rootfs.hash.clone())
+            .or_insert(ProjectState {
+                rootfs_hash: base_config.rootfs.hash.clone(),
+            });
+
+        let rootfs_path = state.data_dir.join(ROOTFS_DIR).join(&base_config.rootfs.hash);
+
+        let rootfs = match RootFS::get(&rootfs_path).context("Failed to get rootfs")? {
+            Some(rootfs) => rootfs,
+            None => RootFS::init(
+                &rootfs_path,
+                &ManifestFetchSpec {
+                    url: base_config.rootfs.url.unwrap_or(DEFAULT_MANIFESTS_URL.to_string()),
+                    version: base_config.rootfs.version,
+                    hash: base_config.rootfs.hash.clone(),
+                },
+                &mut stdout(),
+            )
+            .context("Failed to initialize rootfs")?,
+        };
+        let rootfs = Arc::new(rootfs);
+
+        let mut binary_to_pkgset: HashMap<&str, Option<Arc<CachedPkgSet>>> = HashMap::new();
+        for binary in ["bsdtar", "git", "patch", "sha256sum", "wget"] {
+            let Some(pkg) = rootfs.lookup_package_of_binary(binary) else {
+                bail!("This rootfs manifest is missing a required package mapping for the `{}` binary", binary);
+            };
+
+            binary_to_pkgset.insert(binary, CachedPkgSet::get(&rootfs, &None, &BTreeSet::from([pkg]), &mut stdout())?);
+        }
+
+        let workdir_parent = Arc::new(WorkDirectoryParent::get(state.data_dir.join(WORKDIRS_DIR)).context("Failed to get workdirs parent")?);
+
+        // TODO: we are creating a build cache into a work directory because we do not
+        // use a build cache here, it should only be optionally required by core
+        let build_cache_workdir = WorkDirectory::create(&workdir_parent)?;
+        let build_cache = Arc::new(BuildCache::get(build_cache_workdir.path())?);
+
+        let core_context = CoreContext {
+            parallelism: NonZero::new(4).unwrap(),
+            rootfs,
+            workdir_parent,
+            ledger: state.ledger.clone(),
+            store: Arc::new(Store::get(state.data_dir.join(STORE_DIR)).context("Failed to get store")?),
+            build_cache,
+            build_cache_enabled: HashSet::new(),
+            bsdtar_pkgset: binary_to_pkgset.remove("bsdtar").unwrap(),
+            git_pkgset: binary_to_pkgset.remove("git").unwrap(),
+            patch_pkgset: binary_to_pkgset.remove("patch").unwrap(),
+            sha256sum_pkgset: binary_to_pkgset.remove("sha256sum").unwrap(),
+            wget_pkgset: binary_to_pkgset.remove("wget").unwrap(),
+        };
+
+        let worker_count = available_parallelism().unwrap().div_ceil(NonZero::new(2).unwrap());
+
+        for profile in &project_config.profiles {
+            let target_prefix = base_config.target_prefix.clone().unwrap_or_else(|| String::from(DEFAULT_TARGET_PREFIX));
+
+            let global_environment = Arc::new(GlobalEnvironment {
+                global_environment_variables: base_config.global_environment_variables.clone(),
+                global_native_packages: base_config.global_native_packages.clone(),
+                rootfs_manifest_hash: base_config.rootfs.hash.clone(),
+                target_prefix,
+                target_arch: profile.target_arch.clone(),
+            });
+
+            let lua_config_path = join_soft(
+                project_root,
+                base_config.lua_root.clone().unwrap_or(PathBuf::from(DEFAULT_LUA_CONFIG_PATH)),
+            );
+
+            let local_sources_workdir = WorkDirectory::create(&core_context.workdir_parent)?;
+
+            let config = eval_lua_config(
+                lua_config_path,
+                project_root,
+                global_environment,
+                profile.options.clone(),
+                local_sources_workdir.path(),
+                HashMap::new(),
+            )
+            .context("Failed to evaluate lua config")?;
+
+            let mut graph_builder = BuildGraphBuilder::new();
+            for (name, platform) in iter::chain(
+                project_config.build_packages.iter().zip(iter::repeat(PackagePlatform::Target)),
+                project_config.build_tools.iter().zip(iter::repeat(PackagePlatform::Host)),
+            ) {
+                let package = config
+                    .packages
+                    .iter()
+                    .find(|package| &package.name == name && package.platform == platform);
+
+                let package = match package {
+                    Some(package) => package,
+                    None => bail!("Config does not contain a {} package `{}`", platform.to_string(), name),
+                };
+
+                graph_builder.add_root_package(package);
+            }
+
+            let build_graph = graph_builder.finish();
+
+            let tracer = BuildServerTracer::new();
+
+            let build_manager = BuildManager::new(&core_context, build_graph, Arc::new(tracer));
+
+            let report = build_manager.execute(FailureMode::KeepGoing, worker_count);
+        }
+    }
+
+    file_state.projects = file_state
+        .projects
+        .into_iter()
+        .filter(|(name, _)| state.config.projects.contains_key(name))
+        .collect();
+
+    write_state(&state_path, &file_state).context("Failed to write state")?;
+
+    let rootfs_hashes: HashSet<String> = file_state.projects.values().map(|state| state.rootfs_hash.clone()).collect();
+
+    for entry in dir_entries(state.data_dir.join(ROOTFS_DIR))? {
+        if rootfs_hashes.contains(&entry.file_name().to_string_lossy().to_string()) {
+            continue;
+        }
+
+        force_rm(entry.path()).context("Failed to remove stale rootfs")?;
+    }
+
+    Ok(())
+}
