@@ -1,18 +1,30 @@
-use std::{fs::read_to_string, path::PathBuf, sync::Arc, time::Duration};
+use std::{
+    fs::read_to_string,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+    thread::sleep,
+    time::Duration,
+};
 
 use anyhow::{Context, Result};
 use axum::{Router, routing::get};
 use chariot_core::ledger::Ledger;
 use chariot_util::{current_timestamp, fs::make_path, lock::DirLock};
-use tokio::time::{MissedTickBehavior, interval};
+use std::fs::{rename, write};
+use tokio::sync::broadcast;
 use tower_http::services::ServeDir;
 
-use crate::{config::BuildServerConfig, job::run_build};
+use crate::{
+    api::events::BuildServerEvent,
+    config::BuildServerConfig,
+    db::Database,
+    job::{Job, run_build},
+};
 
 mod api;
 mod config;
+mod db;
 mod job;
-mod state;
 mod tracer;
 
 const DATA_DIR: &str = "./data";
@@ -21,7 +33,7 @@ const ROOTFS_DIR: &str = "rootfs";
 const WORKDIRS_DIR: &str = "work";
 const STORE_DIR: &str = "store";
 const LEDGER_FILENAME: &str = "ledger.db";
-const STATE_FILENAME: &str = "state.json";
+const DATABASE_FILENAME: &str = "buildserver.db";
 const LASTRUN_FILENAME: &str = "last_run.txt";
 const LASTRUN_TMP_FILENAME: &str = "last_run.txt.tmp";
 
@@ -29,39 +41,37 @@ struct BuildServerState {
     data_dir: PathBuf,
     config: BuildServerConfig,
     ledger: Arc<Ledger>,
+    db: Arc<Database>,
+    current_job: RwLock<Option<Arc<Job>>>,
+    event_channel: broadcast::Sender<BuildServerEvent>,
 }
 
-async fn interval_handler(state: Arc<BuildServerState>) -> ! {
+fn interval_handler(state: Arc<BuildServerState>) -> ! {
     let last_run_path = state.data_dir.join(LASTRUN_FILENAME);
-    let mut last_run = tokio::fs::read_to_string(&last_run_path)
-        .await
-        .ok()
-        .map(|data| data.trim().parse::<u64>().ok())
-        .flatten();
-
-    let mut tick = interval(Duration::from_secs(60));
-    tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    let mut last_run = read_to_string(&last_run_path).ok().map(|data| data.trim().parse::<u64>().ok()).flatten();
 
     loop {
-        tick.tick().await;
-
         let now = current_timestamp();
         let due = match last_run {
             None => true,
-            Some(t) => now >= t + state.config.interval,
+            Some(last) => now >= last + state.config.interval,
         };
 
         if !due {
             continue;
         }
 
+        println!("Running build");
+
         run_build(&state).expect("Build failed");
 
         let tmp_path = state.data_dir.join(LASTRUN_TMP_FILENAME);
-        tokio::fs::write(&tmp_path, now.to_string()).await.expect("Failed to write last run tmp");
-        tokio::fs::rename(&tmp_path, &last_run_path).await.expect("Failed to rename last run");
+        write(&tmp_path, now.to_string()).expect("Failed to write last run tmp");
+        rename(&tmp_path, &last_run_path).expect("Failed to rename last run");
 
         last_run = Some(now);
+
+        sleep(Duration::from_secs(10));
     }
 }
 
@@ -80,25 +90,34 @@ async fn main() -> Result<()> {
 
     let ledger = Ledger::get(data_dir.join(LEDGER_FILENAME)).context("Failed to get ledger")?;
 
+    let db = Database::get(data_dir.join(DATABASE_FILENAME)).context("Failed to open database")?;
+
+    let (tx, _) = broadcast::channel::<BuildServerEvent>(100);
     let state = Arc::new(BuildServerState {
         data_dir,
         config,
+        db: Arc::new(db),
         ledger: Arc::new(ledger),
+        current_job: RwLock::new(None),
+        event_channel: tx,
     });
 
     let app = Router::new()
-        .route("/meta/projects", get(api::meta::get_projects))
+        .route("/events", get(api::events::get_events))
+        .route("/projects", get(api::meta::get_projects))
+        .route("/project/{project}/jobs", get(api::jobs::get_project))
+        .route("/job/active", get(api::jobs::get_current))
+        .route("/job/{id}/details", get(api::jobs::get))
         .route("/ledger/lookup/{category}/{hash}", get(api::ledger::lookup))
         .with_state(state.clone())
         .fallback_service(ServeDir::new("static"));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
-
-    let server = tokio::spawn(async move { axum::serve(listener, app).await });
+    println!("Listening on 127.0.0.1:3000 <3");
 
     std::thread::spawn(|| interval_handler(state));
 
-    server.await??;
+    axum::serve(listener, app).await?;
 
     Ok(())
 }

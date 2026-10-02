@@ -9,7 +9,13 @@ use crate::config::{package::Package, source::Source};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TaskId(usize);
 
-#[derive(Clone)]
+impl From<TaskId> for usize {
+    fn from(value: TaskId) -> Self {
+        value.0
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum TaskKind {
     Package { package: Arc<Package>, runtime_dep_edges: Vec<TaskId> },
     Source { source: Arc<Source> },

@@ -22,6 +22,9 @@ pub struct ProjectConfig {
     pub base_config_path: Option<String>,
 
     #[serde(default)]
+    pub disabled: bool,
+
+    #[serde(default)]
     pub profiles: Vec<BuildProfile>,
 
     #[serde(default)]

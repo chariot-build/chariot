@@ -15,5 +15,3 @@ pub async fn get_projects(State(state): State<Arc<BuildServerState>>) -> Json<Va
 
     Json(json!({ "projects": projects }))
 }
-
-// pub async fn lookup(State(state): State<Arc<BuildServerState>>, Path((category, input_hash)): Path<(String, String)>) -> ApiResult<Json<Value>> {
