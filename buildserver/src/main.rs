@@ -13,7 +13,7 @@ use chariot_util::{current_timestamp, fs::make_path, lock::DirLock};
 use std::fs::{rename, write};
 use tokio::sync::broadcast;
 use tower_http::services::ServeDir;
-
+use tower_http::cors::{Any, CorsLayer};
 use crate::{
     api::events::BuildServerEvent,
     config::BuildServerConfig,
@@ -109,6 +109,7 @@ async fn main() -> Result<()> {
         .route("/job/active", get(api::jobs::get_current))
         .route("/job/{id}/details", get(api::jobs::get))
         .route("/ledger/lookup/{category}/{hash}", get(api::ledger::lookup))
+        .layer(CorsLayer::permissive())
         .with_state(state.clone())
         .fallback_service(ServeDir::new("static"));
 
