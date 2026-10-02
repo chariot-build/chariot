@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{i64, sync::Arc, time::Duration};
 
 use axum::{
     extract::State,
@@ -18,7 +18,7 @@ use crate::{
 
 #[derive(Clone)]
 pub enum BuildServerEvent {
-    JobStart(u64),
+    JobStart(i64),
     JobEnd,
     TaskRegister(usize, JobTaskKind, String),
     TaskStatus(usize, JobTaskStatus),

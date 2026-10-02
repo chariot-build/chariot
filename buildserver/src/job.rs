@@ -79,7 +79,7 @@ pub enum JobStatus {
 }
 
 pub struct Job {
-    pub id: u64,
+    pub id: i64,
     pub project: String,
     pub tasks: RwLock<HashMap<usize, JobTask>>,
 }
@@ -172,16 +172,7 @@ pub fn run_project_build(state: &Arc<BuildServerState>, store: &Arc<Store>, proj
     let worker_count = NonZero::new(2).unwrap();
 
     for profile in &project_config.profiles {
-        let job_id = loop {
-            let id = current_timestamp();
-
-            if state.db.get_job_project(id)?.is_none() {
-                break id;
-            }
-        };
-
-        state.db.create_job(
-            job_id,
+        let job_id = state.db.create_job(
             project_name,
             &profile.target_arch,
             profile.options.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect(),
