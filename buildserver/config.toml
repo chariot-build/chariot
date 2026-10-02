@@ -6,7 +6,6 @@ build_tools = []
 
 [projects.terra.git_repository]
 url = "https://github.com/vcvtph2ps/terra.git"
-branch = "chariot-v3-testing"
 
 [[projects.terra.profiles]]
 target_arch = "x86_64"
