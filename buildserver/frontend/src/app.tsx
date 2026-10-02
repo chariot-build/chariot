@@ -55,7 +55,6 @@ export function App() {
                 </h2>
                 {selectedJob !== null ? (
                     <JobDetails
-                        selectedProject={selectedProject}
                         selectedJob={selectedJob}
                         refreshToken={refreshToken}
                     />

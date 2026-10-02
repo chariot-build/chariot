@@ -1,4 +1,4 @@
-export const API_BASE = "http://localhost:3000";
+export const API_BASE = `${window.location.protocol}//${window.location.hostname}:3000`;
 
 export async function fetchJson(url: string) {
     const response = await fetch(`${API_BASE}${url}`);

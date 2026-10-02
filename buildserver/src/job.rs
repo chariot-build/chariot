@@ -244,9 +244,7 @@ pub fn run_project_build(state: &Arc<BuildServerState>, store: &Arc<Store>, proj
         let build_graph = graph_builder.finish();
 
         let tracer = BuildServerTracer::new(state.clone(), job);
-
         let build_manager = BuildManager::new(&core_context, build_graph, Arc::new(tracer));
-
         let report = build_manager.execute(FailureMode::KeepGoing, worker_count);
 
         let _ = state.event_channel.send(BuildServerEvent::JobEnd);
