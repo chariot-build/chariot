@@ -1,178 +1,101 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Chariot Build Server</title>
-<style>
-  :root {
-    color-scheme: light dark;
-    --bg: #ffffff;
-    --fg: #1a1a1a;
-    --muted: #6b6b6b;
-    --border: #e2e2e2;
-    --sidebar-bg: #f7f7f8;
-    --hover: #ececee;
-    --active-bg: #1a1a1a;
-    --active-fg: #ffffff;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1e1e1e;
-      --fg: #eaeaea;
-      --muted: #9a9a9a;
-      --border: #333333;
-      --sidebar-bg: #171717;
-      --hover: #2a2a2a;
-      --active-bg: #eaeaea;
-      --active-fg: #1a1a1a;
-    }
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    color: var(--fg);
-    background: var(--bg);
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-  }
-  #sidebar {
-    width: 240px;
-    flex-shrink: 0;
-    background: var(--sidebar-bg);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  #sidebar h1 {
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted);
-    padding: 16px 16px 8px;
-    margin: 0;
-  }
-  #project-list {
-    list-style: none;
-    margin: 0;
-    padding: 0 8px;
-  }
-  #project-list li button {
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    color: var(--fg);
-    font-size: 14px;
-    padding: 8px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  #project-list li button:hover {
-    background: var(--hover);
-  }
-  #project-list li button.active {
-    background: var(--active-bg);
-    color: var(--active-fg);
-  }
-  #project-list .empty,
-  #project-list .error {
-    padding: 8px 10px;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  #main {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px;
-  }
-  #main h2 {
-    margin-top: 0;
-  }
-  #main .repo {
-    color: var(--muted);
-    font-size: 14px;
-  }
-  #main .placeholder {
-    color: var(--muted);
-  }
-</style>
-</head>
-<body>
-  <nav id="sidebar">
-    <h1>Projects</h1>
-    <ul id="project-list"></ul>
-  </nav>
-  <main id="main">
-    <p class="placeholder">Select a project.</p>
-  </main>
+<html>
+    <head>
+        <script type="module" src="/main.js" defer></script>
+        <link rel="stylesheet" href="/style.css" />
+    </head>
+    <body>
+        <div class="sidebar">
+            <h2>Chariot Build Server</h2>
+            <div id="sidebar_content"></div>
+        </div>
 
-  <script>
-    const listEl = document.getElementById("project-list");
-    const mainEl = document.getElementById("main");
+        <div id="job_details"></div>
 
-    let projects = [];
-    let activeName = null;
+        <!--<script>
+            (async () => {
+                const taskTable = document.getElementById("tasks");
+                const jobIdHeader = document.getElementById("jobid");
 
-    function render() {
-      listEl.innerHTML = "";
 
-      if (projects.length === 0) {
-        const li = document.createElement("li");
-        li.className = "empty";
-        li.textContent = "No projects configured";
-        listEl.appendChild(li);
-        return;
-      }
+                let jobId = null;
+                let tasks = [];
 
-      for (const project of projects) {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.textContent = project.name;
-        btn.className = project.name === activeName ? "active" : "";
-        btn.addEventListener("click", () => selectProject(project.name));
-        li.appendChild(btn);
-        listEl.appendChild(li);
-      }
-    }
+                function render() {
+                    if (jobId != null) {
+                        jobIdHeader.innerText = jobId;
+                        taskTable.innerHTML = "";
+                        for (const task of tasks) {
+                            const task_row = document.createElement("tr");
 
-    function selectProject(name) {
-      activeName = name;
-      render();
+                            const task_type = document.createElement("td");
+                            task_type.innerText = task.type;
+                            task_row.appendChild(task_type);
 
-      const project = projects.find((p) => p.name === name);
-      mainEl.innerHTML = "";
+                            const task_name = document.createElement("td");
+                            task_name.innerText = task.name;
+                            task_row.appendChild(task_name);
 
-      const h2 = document.createElement("h2");
-      h2.textContent = project.name;
-      mainEl.appendChild(h2);
+                            const task_status = document.createElement("td");
+                            task_status.innerText = task.status;
+                            task_row.appendChild(task_status);
 
-      const repo = document.createElement("div");
-      repo.className = "repo";
-      repo.textContent = project.repository;
-      mainEl.appendChild(repo);
-    }
+                            taskTable.appendChild(task_row);
+                        }
+                    }
+                }
 
-    async function loadProjects() {
-      try {
-        const res = await fetch("/meta/projects");
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        const data = await res.json();
-        projects = data.projects || [];
-        render();
-        if (projects.length > 0) selectProject(projects[0].name);
-      } catch (err) {
-        listEl.innerHTML = "";
-        const li = document.createElement("li");
-        li.className = "error";
-        li.textContent = `Failed to load projects: ${err.message}`;
-        listEl.appendChild(li);
-      }
-    }
+                es.addEventListener("job_start", (e) => {
+                    const data = JSON.parse(e.data);
 
-    loadProjects();
-  </script>
-</body>
+                    jobId = data.id;
+                    tasks = [];
+
+                    render();
+                });
+
+                es.addEventListener("job_end", (e) => {});
+
+                es.addEventListener("task_register", (e) => {
+                    const data = JSON.parse(e.data);
+
+                    tasks[data.id] = {
+                        name: data.name,
+                        type: data.type,
+                        status: "pending",
+                    };
+
+                    render();
+                });
+
+                es.addEventListener("task_status", (e) => {
+                    const data = JSON.parse(e.data);
+
+                    console.log(data);
+                    if (tasks[data.id] !== undefined) {
+                        tasks[data.id].status = data.status;
+                        render();
+                    }
+                });
+
+                const currRes = await fetch("/job/current");
+                const currData = await currRes.json();
+                if (currData.id != null) {
+                    jobId = currData.id;
+
+                    const res = await fetch(`/job/${jobId}/info`);
+                    const data = await res.json();
+                    for (let task of data.tasks) {
+                        tasks[task.id] = {
+                            name: task.name,
+                            type: task.type,
+                            status: task.status,
+                        };
+                    }
+                }
+
+                render();
+            })();
+        </script>-->
+    </body>
 </html>

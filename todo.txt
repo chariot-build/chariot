@@ -1,2 +1,0 @@
-- purge downloaded rootfs packages (like .deb's etc)
-- decimate CoreContext if possible, make BuildCache optional at least, somehow combine the pkgsets hopefully

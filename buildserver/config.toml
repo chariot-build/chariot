@@ -1,0 +1,24 @@
+interval = 10
+
+[projects.terra]
+build_packages = ["kernel"]
+build_tools = []
+
+[projects.terra.git_repository]
+url = "https://github.com/vcvtph2ps/terra.git"
+branch = "chariot-v3-testing"
+
+[[projects.terra.profiles]]
+target_arch = "x86_64"
+options = { build_type = "debug", bootloader = "limine" }
+
+[projects.evalynos]
+build_packages = []
+build_tools = []
+disabled = true
+
+[projects.evalynos.git_repository]
+url = "https://github.com/EvalynGoemer/evalynOS.git"
+
+[[projects.evalynos.profiles]]
+target_arch = "x86_64"
