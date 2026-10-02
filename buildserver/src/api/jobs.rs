@@ -21,7 +21,7 @@ pub async fn get_project(State(state): State<Arc<BuildServerState>>, Path(projec
     Ok(Json(json!({ "jobs": state.db.get_project_jobs(&project)? })))
 }
 
-pub async fn get(State(state): State<Arc<BuildServerState>>, Path(id): Path<u64>) -> ApiResult<Json<Value>> {
+pub async fn get(State(state): State<Arc<BuildServerState>>, Path(id): Path<i64>) -> ApiResult<Json<Value>> {
     if let Some(job) = state.current_job.read().unwrap().as_ref()
         && job.id == id
     {

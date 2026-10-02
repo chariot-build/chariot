@@ -28,7 +28,7 @@ impl Database {
             ) STRICT;
 
             CREATE TABLE IF NOT EXISTS job (
-                id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project TEXT NOT NULL,
                 target_arch TEXT NOT NULL,
                 status INTEGER NOT NULL
@@ -41,6 +41,17 @@ impl Database {
                 PRIMARY KEY(job_id, key),
                 FOREIGN KEY(job_id) REFERENCES job(id) ON DELETE CASCADE
             ) STRICT;
+
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id INTEGER NOT NULL,
+                status INTEGER NOT NULL,
+
+                FOREIGN KEY (job_id) REFERENCES job(id)
+                FOREIGN KEY(job_id) REFERENCES job(id) ON DELETE CASCADE
+            ) STRICT;
+
+            CREATE INDEX IF NOT EXISTS idx_tasks_job_id ON tasks(job_id)
             ",
         )?;
 
@@ -69,20 +80,23 @@ impl Database {
         Ok(())
     }
 
-    pub fn create_job(&self, id: u64, project: &str, target_arch: &str, options: HashMap<&str, &str>) -> Result<(), rusqlite::Error> {
+    pub fn create_job(&self, project: &str, target_arch: &str, options: HashMap<&str, &str>) -> Result<i64, rusqlite::Error> {
         let conn = self.0.lock().unwrap();
         let tx = conn.unchecked_transaction()?;
 
-        tx.execute(
-            "INSERT INTO job (id, project, target_arch, status) VALUES (?, ?, ?, ?)",
-            params![id as i64, project, target_arch, 0 as i64],
+        let id = tx.query_one(
+            "INSERT INTO job (project, target_arch, status) VALUES (?, ?, ?) RETURNING id",
+            params![project, target_arch, 0 as i64],
+            |row| row.get::<usize, i64>(0),
         )?;
 
         for (k, v) in options {
             tx.execute("INSERT INTO job_options (job_id, key, value) VALUES (?, ?, ?)", params![id as i64, k, v])?;
         }
 
-        tx.commit()
+        tx.commit()?;
+
+        Ok(id)
     }
 
     pub fn get_project_jobs(&self, project: &str) -> Result<Vec<u64>, rusqlite::Error> {
@@ -92,14 +106,13 @@ impl Database {
             .collect::<Result<Vec<_>, _>>()
     }
 
-    pub fn get_job_project(&self, id: u64) -> Result<Option<String>, rusqlite::Error> {
+    pub fn get_job_project(&self, id: i64) -> Result<Option<String>, rusqlite::Error> {
         match self
             .0
             .lock()
             .unwrap()
-            .query_one("SELECT project FROM job WHERE id = ?", params![id as i64], |row| {
-                row.get::<usize, String>(0)
-            }) {
+            .query_one("SELECT project FROM job WHERE id = ?", params![id], |row| row.get::<usize, String>(0))
+        {
             Ok(project) => Ok(Some(project)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(err) => Err(err),
