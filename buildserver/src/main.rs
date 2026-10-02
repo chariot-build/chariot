@@ -6,20 +6,20 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{Context, Result};
-use axum::{Router, routing::get};
-use chariot_core::ledger::Ledger;
-use chariot_util::{current_timestamp, fs::make_path, lock::DirLock};
-use std::fs::{rename, write};
-use tokio::sync::broadcast;
-use tower_http::services::ServeDir;
-use tower_http::cors::{Any, CorsLayer};
 use crate::{
     api::events::BuildServerEvent,
     config::BuildServerConfig,
     db::Database,
     job::{Job, run_build},
 };
+use anyhow::{Context, Result};
+use axum::{Router, routing::get};
+use chariot_core::ledger::Ledger;
+use chariot_util::{current_timestamp, fs::make_path, lock::DirLock};
+use std::fs::{rename, write};
+use tokio::sync::broadcast;
+use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 
 mod api;
 mod config;
@@ -113,8 +113,8 @@ async fn main() -> Result<()> {
         .with_state(state.clone())
         .fallback_service(ServeDir::new("static"));
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
-    println!("Listening on 127.0.0.1:3000 <3");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    println!("Listening on 0.0.0.0:3000 <3");
 
     std::thread::spawn(|| interval_handler(state));
 
