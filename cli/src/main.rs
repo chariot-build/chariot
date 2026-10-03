@@ -59,15 +59,15 @@ fn main() {
         .expect("Failed to initialize logger");
 
     if let Err(err) = run_cli() {
-        error!("{}", err);
+        error!("{err}");
         if err.chain().len() > 1 {
             error!("Caused by:");
             for (i, sub_error) in err.chain().skip(1).enumerate() {
                 for (j, line) in sub_error.to_string().lines().enumerate() {
                     if j == 0 {
-                        error!("  {}: {}", i, line);
+                        error!("  {i}: {line}");
                     } else {
-                        error!("     {}", line);
+                        error!("     {line}");
                     }
                 }
             }
