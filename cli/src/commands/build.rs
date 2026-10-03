@@ -39,8 +39,10 @@ pub fn run(build_opts: BuildOptions, local_config: &CliConfig) -> Result<()> {
         return Err(err);
     }
 
-    prune_store_and_ledger(&ctx.store, &ctx.ledger, &cached_hashes)?;
-    ctx.build_cache.prune(ctx.build_cache_enabled)?;
+    if !local_config.disable_pruning {
+        prune_store_and_ledger(&ctx.store, &ctx.ledger, &cached_hashes)?;
+        ctx.build_cache.prune(ctx.build_cache_enabled)?;
+    }
 
     Ok(())
 }

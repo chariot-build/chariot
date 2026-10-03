@@ -35,6 +35,7 @@ pub struct CliConfig {
     pub pkgs: HashMap<String, PackageConfig>,
     pub tools: HashMap<String, PackageConfig>,
     pub source_overrides: HashMap<String, OverrideConfig>,
+    pub disable_pruning: bool,
 }
 
 impl CliConfig {
