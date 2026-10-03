@@ -21,7 +21,7 @@ pub fn run(install_opts: InstallOptions, local_config: &CliConfig) -> Result<()>
 
     let worker_count = install_opts.execution_opts.worker_count;
     let mode = install_opts.execution_opts.failure_mode();
-    let (ctx, config, cached_hashes, _local_sources_workdir) = prepare_build(&cache, install_opts.common_build_opts, local_config, &terminal)?;
+    let (ctx, config, _local_sources_workdir) = prepare_build(&cache, install_opts.common_build_opts, local_config, &terminal)?;
 
     let platform = if install_opts.tool {
         PackagePlatform::Host
@@ -63,7 +63,7 @@ pub fn run(install_opts: InstallOptions, local_config: &CliConfig) -> Result<()>
         )?;
     }
 
-    prune_store_and_ledger(&ctx.store, &ctx.ledger, &cached_hashes)?;
+    prune_store_and_ledger(&ctx.store, &ctx.ledger, &cache.1.all_cached_hashes()?)?;
     ctx.build_cache.prune(ctx.build_cache_enabled)?;
 
     Ok(())

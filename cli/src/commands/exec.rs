@@ -39,7 +39,7 @@ pub fn run(exec_options: ExecOptions, local_config: &CliConfig) -> Result<()> {
 
     let worker_count = exec_options.execution_opts.worker_count;
     let mode = exec_options.execution_opts.failure_mode();
-    let (ctx, config, _, _local_sources_workdir) = prepare_build(&cache, exec_options.common_build_opts, local_config, &terminal)?;
+    let (ctx, config, _local_sources_workdir) = prepare_build(&cache, exec_options.common_build_opts, local_config, &terminal)?;
 
     let mut packages = exec_options
         .pkg

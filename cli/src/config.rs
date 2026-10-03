@@ -18,18 +18,13 @@ use chariot_core::{
 use chariot_util::fs::join_soft;
 use dialoguer::Confirm;
 
-use crate::{
-    args::ConfigOptions,
-    cache::{Cache, InputProfile},
-    cli_config::CliConfig,
-};
+use crate::{args::ConfigOptions, cache::Cache, cli_config::CliConfig};
 
 pub struct ResolvedProfile {
     pub workdir_parent: Arc<WorkDirectoryParent>,
     pub local_sources_workdir: WorkDirectory,
     pub base_config: BaseConfig,
     pub config: Config,
-    pub cached_hashes: HashSet<(String, u128)>,
 }
 
 pub fn resolve_profile(cache: &Cache, config_opts: ConfigOptions, local_config: &CliConfig) -> Result<ResolvedProfile> {
@@ -38,53 +33,43 @@ pub fn resolve_profile(cache: &Cache, config_opts: ConfigOptions, local_config: 
     let workdir_parent = cache.open_workdir_parent()?;
     let local_sources_workdir = WorkDirectory::create(&workdir_parent)?;
 
-    let (base_config, config, cached_hashes) = cache.with_state(|state| {
-        let input_state = InputProfile {
-            arch: config_opts.arch.clone(),
-            options: options.clone(),
-        };
+    let (base_config, config_dir) = read_base_config_and_dir(&config_opts.base_config)?;
 
-        let input_state_index = match state.known_input_profiles.iter().position(|s| s == &input_state) {
-            Some(index) => index,
-            None => {
-                let ok = config_opts.allow_new_profiles
-                    || Confirm::new()
-                        .default(true)
-                        .with_prompt("Detected a new profile (profile describes a specific permutation of architecture and options). Proceed?")
-                        .interact()?;
+    let config = load_profile_config(
+        &base_config,
+        &config_dir,
+        config_opts.arch.clone(),
+        options.clone(),
+        local_sources_workdir.path(),
+        local_config.get_source_overrides(),
+    )?;
 
-                if !ok {
-                    bail!("Canceled by user");
-                }
+    let hashes = hash_config(&config);
 
-                let len = state.known_input_profiles.len();
-                state.known_input_profiles.push(input_state);
-                len
-            }
-        };
+    if !cache
+        .1
+        .profile_cache_hashes(false, &config_opts.arch, &options.iter().collect(), &hashes)?
+    {
+        let ok = config_opts.allow_new_profiles
+            || Confirm::new()
+                .default(true)
+                .with_prompt("Detected a new profile (profile describes a specific permutation of architecture and options). Proceed?")
+                .interact()?;
 
-        let (base_config, config_dir) = read_base_config_and_dir(&config_opts.base_config)?;
+        if !ok {
+            bail!("Canceled by user");
+        }
 
-        let config = load_profile_config(
-            &base_config,
-            &config_dir,
-            config_opts.arch.clone(),
-            options.clone(),
-            local_sources_workdir.path(),
-            local_config.get_source_overrides(),
-        )?;
-
-        state.cached_hashes.insert(input_state_index, hash_config(&config));
-
-        Ok((base_config, config, state.all_cached_hashes()))
-    })?;
+        cache
+            .1
+            .profile_cache_hashes(true, &config_opts.arch, &options.iter().collect(), &hashes)?;
+    }
 
     Ok(ResolvedProfile {
         workdir_parent,
         local_sources_workdir,
         base_config,
         config,
-        cached_hashes,
     })
 }
 

@@ -71,13 +71,12 @@ pub fn prepare_build(
     build_opts: CommonBuildOptions,
     local_config: &CliConfig,
     terminal: &Arc<Terminal>,
-) -> Result<(CoreContext, Config, HashSet<(String, u128)>, WorkDirectory)> {
+) -> Result<(CoreContext, Config, WorkDirectory)> {
     let ResolvedProfile {
         workdir_parent,
         local_sources_workdir,
         base_config,
         config,
-        cached_hashes,
     } = resolve_profile(cache, build_opts.config_opts, local_config)?;
 
     let rootfs = Arc::new(match RootFS::get(&build_opts.rootfs).context("Failed to get rootfs")? {
@@ -178,5 +177,5 @@ pub fn prepare_build(
         rootfs,
     };
 
-    Ok((ctx, config, cached_hashes, local_sources_workdir))
+    Ok((ctx, config, local_sources_workdir))
 }

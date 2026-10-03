@@ -34,22 +34,23 @@ pub fn run(options: CacheOptions, local_config: &CliConfig) -> Result<()> {
 
             let (base_config, config_dir) = read_base_config_and_dir(&base_config_path)?;
 
-            cache.with_state(|state| {
-                for (idx, input_state) in state.known_input_profiles.iter().enumerate() {
-                    let config = load_profile_config(
-                        &base_config,
-                        &config_dir,
-                        input_state.arch.clone(),
-                        input_state.options.clone(),
-                        local_sources_workdir.path(),
-                        local_config.get_source_overrides(),
-                    )?;
+            let known_profiles = cache.1.all_cached_profiles()?;
+            for (arch, options) in known_profiles {
+                let config = load_profile_config(
+                    &base_config,
+                    &config_dir,
+                    arch.clone(),
+                    options.clone(),
+                    local_sources_workdir.path(),
+                    local_config.get_source_overrides(),
+                )?;
 
-                    state.cached_hashes.insert(idx, hash_config(&config));
-                }
+                cache
+                    .1
+                    .profile_cache_hashes(false, &arch, &options.iter().collect(), &hash_config(&config))?;
+            }
 
-                prune_store_and_ledger(&store, &ledger, &state.all_cached_hashes())
-            })?;
+            prune_store_and_ledger(&store, &ledger, &cache.1.all_cached_hashes()?)?;
         }
         CacheCommand::ListLedger => {
             let ledger = cache.open_ledger()?;
