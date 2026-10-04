@@ -22,7 +22,7 @@ export function SidebarEntry({
     let jobs_elements;
     console.log(jobs);
     if (jobs !== null) {
-        jobs_elements = jobs.map((job) => (
+        jobs_elements = jobs.toReversed().map((job) => (
             <button
                 key={job}
                 className={cn(
