@@ -8,7 +8,7 @@ use std::{
 
 use rusqlite::{Connection, params, types::Value};
 
-use crate::job::{JobTask, JobTaskStatus};
+use crate::job::{JobTask, JobTaskKind, JobTaskStatus};
 
 pub struct Database(Mutex<Connection>);
 
@@ -50,6 +50,7 @@ impl Database {
                 name TEXT NOT NULL,
                 kind INTEGER NOT NULL,
                 status INTEGER NOT NULL,
+                input_hash BLOB NOT NULL,
 
                 FOREIGN KEY(job_id) REFERENCES job(id) ON DELETE CASCADE
             ) STRICT;
@@ -102,35 +103,39 @@ impl Database {
         Ok(id)
     }
 
-    pub fn finalize_job(&self, job_id: i64, tasks: &HashMap<usize, JobTask>) -> Result<(), rusqlite::Error> {
+    pub fn create_task(&self, job_id: i64, name: &str, kind: JobTaskKind, status: JobTaskStatus, input_hash: u128) -> Result<i64, rusqlite::Error> {
         let conn = self.0.lock().unwrap();
-        let tx = conn.unchecked_transaction()?;
 
-        for task in tasks.values() {
-            tx.execute(
-                "INSERT INTO tasks (job_id, name, kind, status) VALUES (?, ?, ?, ?)",
-                params![job_id, task.name, task.kind as i64, task.status as i64],
-            )?;
-        }
+        let id = conn.query_one(
+            "INSERT INTO tasks (job_id, name, kind, status, input_hash) VALUES (?, ?, ?, ?, ?) RETURNING id",
+            params![job_id, name, kind as i64, status as i64, input_hash as i128],
+            |row| row.get::<usize, i64>(0),
+        )?;
 
-        tx.commit()?;
+        Ok(id)
+    }
 
+    pub fn update_task_status(&self, task_id: i64, status: JobTaskStatus) -> Result<(), rusqlite::Error> {
+        let conn = self.0.lock().unwrap();
+        conn.execute("UPDATE tasks SET status = ? WHERE id = ?", params![status as i64, task_id])?;
         Ok(())
     }
 
     pub fn get_job_tasks(&self, job_id: i64) -> Result<Vec<JobTask>, rusqlite::Error> {
         let conn = self.0.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT name, kind, status
+            "SELECT id, name, kind, status, input_hash
                  FROM tasks
                  WHERE job_id = ?",
         )?;
 
         stmt.query_map([job_id], |row| {
             Ok(JobTask {
-                name: row.get(0)?,
-                kind: (row.get::<usize, i64>(1)? as i64).try_into().expect("Invalid JobTask kind value"),
-                status: (row.get::<usize, i64>(2)? as i64).try_into().expect("Invalid JobTask status value"),
+                id: row.get(0)?,
+                name: row.get(1)?,
+                kind: (row.get::<usize, i64>(2)? as i64).try_into().expect("Invalid JobTask kind value"),
+                status: (row.get::<usize, i64>(3)? as i64).try_into().expect("Invalid JobTask status value"),
+                input_hash: (row.get::<usize, i128>(4)? as u128),
             })
         })?
         .collect::<Result<Vec<_>, _>>()

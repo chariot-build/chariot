@@ -37,6 +37,7 @@ pub enum JobTaskStatus {
     Failed,
     Succeeded,
     Skipped,
+    CacheHit,
 }
 
 impl ToString for JobTaskStatus {
@@ -47,11 +48,11 @@ impl ToString for JobTaskStatus {
             JobTaskStatus::Failed => "failed",
             JobTaskStatus::Succeeded => "succeeded",
             JobTaskStatus::Skipped => "skipped",
+            JobTaskStatus::CacheHit => "cache_hit",
         })
     }
 }
 
-// @todo: I'm sure there is a better way to do this
 impl TryFrom<i64> for JobTaskStatus {
     type Error = i64;
 
@@ -62,6 +63,7 @@ impl TryFrom<i64> for JobTaskStatus {
             2 => Ok(JobTaskStatus::Failed),
             3 => Ok(JobTaskStatus::Succeeded),
             4 => Ok(JobTaskStatus::Skipped),
+            5 => Ok(JobTaskStatus::CacheHit),
             _ => Err(value),
         }
     }
@@ -74,6 +76,7 @@ impl From<JobTaskStatus> for i64 {
             JobTaskStatus::Failed => 2,
             JobTaskStatus::Succeeded => 3,
             JobTaskStatus::Skipped => 4,
+            JobTaskStatus::CacheHit => 5,
         }
     }
 }
@@ -85,7 +88,6 @@ pub enum JobTaskKind {
     Tool,
 }
 
-// @todo: I'm sure there is a better way to do this
 impl TryFrom<i64> for JobTaskKind {
     type Error = i64;
 
@@ -119,13 +121,11 @@ impl ToString for JobTaskKind {
 }
 
 pub struct JobTask {
+    pub id: i64,
     pub name: String,
     pub kind: JobTaskKind,
     pub status: JobTaskStatus,
-}
-
-pub enum JobStatus {
-    Pending,
+    pub input_hash: u128,
 }
 
 pub struct Job {
@@ -289,11 +289,6 @@ pub fn run_project_build(state: &Arc<BuildServerState>, store: &Arc<Store>, proj
         let report = build_manager.execute(FailureMode::KeepGoing, worker_count);
 
         let _ = state.event_channel.send(BuildServerEvent::JobEnd);
-        // @todo: we need to handle if a job fails *mid* way, right now we snowball the error to the caller and that probably just panics :^)
-        state
-            .db
-            .finalize_job(job.id.clone(), &job.tasks.read().unwrap())
-            .context("Failed to finalize job")?;
         *state.current_job.write().unwrap() = None;
     }
 

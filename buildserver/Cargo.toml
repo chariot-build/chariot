@@ -20,4 +20,4 @@ tower = "0.5.3"
 tower-http = { version = "0.6.2", features = ["fs", "cors"] }
 futures-util = "0.3.34"
 tokio-stream = { version = "0.1.19", features = ["sync"] }
-rusqlite = { workspace = true, features = ["array"] }
+rusqlite = { workspace = true, features = ["array", "i128_blob"] }

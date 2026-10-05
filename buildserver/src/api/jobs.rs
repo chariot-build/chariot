@@ -35,7 +35,8 @@ pub async fn get(State(state): State<Arc<BuildServerState>>, Path(id): Path<i64>
                     "id": id,
                     "type": &task.kind.to_string(),
                     "name": task.name,
-                    "status": task.status.to_string()
+                    "status": task.status.to_string(),
+                    "input_hash": format!("{:x}", task.input_hash)
                 })
             })
             .collect::<Vec<_>>();
@@ -62,7 +63,8 @@ pub async fn get(State(state): State<Arc<BuildServerState>>, Path(id): Path<i64>
                 "id": id,
                 "type": &task.kind.to_string(),
                 "name": task.name,
-                "status": task.status.to_string()
+                "status": task.status.to_string(),
+                "input_hash": format!("{:x}", task.input_hash)
             })
         })
         .collect::<Vec<_>>();

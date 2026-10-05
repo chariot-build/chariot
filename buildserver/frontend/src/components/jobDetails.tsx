@@ -6,7 +6,13 @@ type Task = {
     id: number;
     type: "source" | "package" | "tool";
     name: string;
-    status: "pending" | "in_progress" | "failed" | "succeeded" | "skipped";
+    status:
+        | "pending"
+        | "in_progress"
+        | "failed"
+        | "succeeded"
+        | "skipped"
+        | "cache_hit";
 };
 
 function TaskStatusIcon({ status }: { status: Task["status"] }) {
@@ -84,6 +90,21 @@ function TaskStatusIcon({ status }: { status: Task["status"] }) {
                 >
                     <circle cx="12" cy="12" r="9" />
                     <path d="M8 12h8" />
+                </svg>
+            );
+        case "cache_hit":
+            return (
+                <svg
+                    viewBox="0 0 24 24"
+                    className={`${base} text-[#d29922]`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M13 7.5 9.5 12.5H12l-1 4 3.5-5H12l1-4Z" />
                 </svg>
             );
     }
