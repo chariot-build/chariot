@@ -1,4 +1,12 @@
 import { useEffect, useState } from "preact/hooks";
+import {
+    CircleCheck,
+    CircleMinus,
+    CircleX,
+    Clock,
+    DatabaseZap,
+    LoaderCircle,
+} from "lucide-preact";
 import { fetchJson } from "../utils/fetch";
 import { useBuildEvents } from "../utils/events";
 import { cn } from "cn";
@@ -25,92 +33,20 @@ function TaskStatusIcon({ status }: { status: Task["status"] }) {
     switch (status) {
         case "in_progress":
             return (
-                <svg
-                    viewBox="0 0 24 24"
+                <LoaderCircle
                     className={`${base} animate-spin text-[#5b8cff]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                >
-                    <circle cx="12" cy="12" r="9" className="opacity-20" />
-                    <path d="M21 12a9 9 0 0 0-9-9" />
-                </svg>
+                />
             );
         case "succeeded":
-            return (
-                <svg
-                    viewBox="0 0 24 24"
-                    className={`${base} text-[#3fb950]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="m8.5 12.5 2.5 2.5 5-5" />
-                </svg>
-            );
+            return <CircleCheck className={`${base} text-[#3fb950]`} />;
         case "failed":
-            return (
-                <svg
-                    viewBox="0 0 24 24"
-                    className={`${base} text-[#f85149]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="m9 9 6 6M15 9l-6 6" />
-                </svg>
-            );
+            return <CircleX className={`${base} text-[#f85149]`} />;
         case "pending":
-            return (
-                <svg
-                    viewBox="0 0 24 24"
-                    className={`${base} text-[#9a9a9a]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 7v5l3 2" />
-                </svg>
-            );
+            return <Clock className={`${base} text-[#9a9a9a]`} />;
         case "skipped":
-            return (
-                <svg
-                    viewBox="0 0 24 24"
-                    className={`${base} text-[#6e6e6e]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M8 12h8" />
-                </svg>
-            );
+            return <CircleMinus className={`${base} text-[#6e6e6e]`} />;
         case "cache_hit":
-            return (
-                <svg
-                    viewBox="0 0 24 24"
-                    className={`${base} text-[#d29922]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M13 7.5 9.5 12.5H12l-1 4 3.5-5H12l1-4Z" />
-                </svg>
-            );
+            return <DatabaseZap className={`${base} text-[#d29922]`} />;
     }
 }
 

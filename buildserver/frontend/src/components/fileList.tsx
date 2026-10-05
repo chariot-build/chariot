@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { File, Folder } from "lucide-preact";
 import { API_BASE, fetchJson } from "../utils/fetch";
 import { cn } from "cn";
 import { readPath, writePath } from "../utils/url";
@@ -13,34 +14,9 @@ function FileTypeIcon({ status }: { status: File["type"] }) {
 
     switch (status) {
         case "directory":
-            return (
-                <svg
-                    viewBox="0 0 24 24"
-                    className={`${base} text-[#5b8cff]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h3l2 2h6A2.5 2.5 0 0 1 20 9.5v7A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5Z" />
-                </svg>
-            );
+            return <Folder className={`${base} text-[#5b8cff]`} />;
         case "file":
-            return (
-                <svg
-                    viewBox="0 0 24 24"
-                    className={`${base} text-[#9a9a9a]`}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <path d="M14 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" />
-                    <path d="M14 4v4h4" />
-                </svg>
-            );
+            return <File className={`${base} text-[#9a9a9a]`} />;
     }
 }
 
