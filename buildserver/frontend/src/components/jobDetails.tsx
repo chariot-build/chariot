@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { fetchJson } from "../utils/fetch";
 import { useBuildEvents } from "../utils/events";
 import { cn } from "cn";
 import { FileList } from "./fileList";
-import { readUrlState, updateUrlState } from "../utils/url";
+import { navigate, parseRoute, routePath, usePathname } from "../utils/router";
 
 type Task = {
     id: number;
@@ -120,7 +120,7 @@ function JobTableEntry({
     setSelectedTask,
 }: {
     task: Task;
-    selectedTask: number;
+    selectedTask: number | null;
     setSelectedTask: (task: number) => void;
 }) {
     return (
@@ -156,30 +156,25 @@ export function JobDetails({
     refreshToken: number;
 }) {
     let [tasks, setTasks] = useState<Task[]>([]);
-    let [selectedTask, setSelectedTask] = useState<number | null>(() => {
-        const task = readUrlState().task;
-        return task === null ? null : Number(task);
-    });
     let [taskHash, setTaskHash] = useState<string | null>(null);
-    let previousJob = useRef(selectedJob);
+
+    const route = parseRoute(usePathname());
+    const selectedTask = route.task === null ? null : Number(route.task);
+
+    const setSelectedTask = (task: number | null) =>
+        navigate(
+            routePath({
+                project: route.project,
+                job: route.job,
+                task: task === null ? null : String(task),
+            }),
+        );
 
     const selectedTaskData = tasks.find((task) => task.id === selectedTask);
 
     useEffect(() => {
-        if (previousJob.current === selectedJob) {
-            return;
-        }
-
-        previousJob.current = selectedJob;
         setTasks([]);
-        setSelectedTask(null);
     }, [selectedJob]);
-
-    useEffect(() => {
-        updateUrlState({
-            task: selectedTask === null ? null : String(selectedTask),
-        });
-    }, [selectedTask]);
 
     useEffect(() => {
         setTaskHash(null);

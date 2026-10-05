@@ -1,7 +1,7 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { API_BASE, fetchJson } from "../utils/fetch";
 import { cn } from "cn";
-import { readUrlState, updateUrlState } from "../utils/url";
+import { readPath, writePath } from "../utils/url";
 
 type File = {
     name: string;
@@ -44,8 +44,15 @@ function FileTypeIcon({ status }: { status: File["type"] }) {
     }
 }
 
-function downloadFile(path: string, name: string) {
-    const relative = `${path}/${encodeURIComponent(name)}`.replace(/^\//, "");
+function storePath(hash: string, path: string) {
+    return path === "/" ? `/install-${hash}` : `/install-${hash}${path}`;
+}
+
+function downloadFile(hash: string, path: string, name: string) {
+    const relative = `${storePath(hash, path)}/${encodeURIComponent(name)}`.replace(
+        /^\//,
+        "",
+    );
     const link = document.createElement("a");
     link.href = `${API_BASE}/store/g/${relative}`;
     link.download = name;
@@ -56,10 +63,12 @@ function downloadFile(path: string, name: string) {
 
 function FileTableEntry({
     file,
+    hash,
     path,
     setPath,
 }: {
     file: File;
+    hash: string;
     path: string;
     setPath: (path: string) => void;
 }) {
@@ -67,9 +76,10 @@ function FileTableEntry({
         <tr
             onClick={() => {
                 if (file.type === "directory") {
-                    setPath(`${path}/${encodeURIComponent(file.name)}`);
+                    const segment = encodeURIComponent(file.name);
+                    setPath(path === "/" ? `/${segment}` : `${path}/${segment}`);
                 } else if (file.type === "file") {
-                    downloadFile(path, file.name);
+                    downloadFile(hash, path, file.name);
                 }
             }}
             className="border-b border-[#2a2a2a] last:border-b-0 cursor-pointer hover:bg-[#242424]"
@@ -95,14 +105,25 @@ function Breadcrumbs({
 
     return (
         <div className="flex flex-wrap items-center gap-1 border-b border-[#2a2a2a] bg-[#1c1c1c] px-4 py-2.5 text-sm">
+            <button
+                onClick={() => setPath("/")}
+                disabled={segments.length === 0}
+                className={cn(
+                    "rounded px-1 py-0.5 text-[#c9c9c9]",
+                    segments.length > 0 &&
+                        "cursor-pointer hover:bg-[#2a2a2a] hover:text-white",
+                    segments.length === 0 && "text-[#f2f2f2] font-medium",
+                )}
+            >
+                /
+            </button>
             {segments.map((segment, index) => {
                 const isLast = index === segments.length - 1;
-                const target =
-                    "/" + segments.slice(0, index + 1).join("/");
+                const target = "/" + segments.slice(0, index + 1).join("/");
 
                 return (
                     <span key={target} className="flex items-center gap-1">
-                        {index > 1 && (
+                        {index > 0 && (
                             <span className="text-[#5a5a5a]">/</span>
                         )}
                         <button
@@ -115,9 +136,7 @@ function Breadcrumbs({
                                 isLast && "text-[#f2f2f2] font-medium",
                             )}
                         >
-                            {index === 0
-                                ? "/"
-                                : decodeURIComponent(segment)}
+                            {decodeURIComponent(segment)}
                         </button>
                     </span>
                 );
@@ -129,21 +148,24 @@ function Breadcrumbs({
 export function FileList({ hash }: { hash: string }) {
     let [path, setPath] = useState<string>("/");
     let [files, setFiles] = useState<File[]>([]);
+    let firstLoad = useRef(true);
 
     useEffect(() => {
-        const prefix = `/install-${hash}`;
-        const stored = readUrlState().path;
+        if (firstLoad.current) {
+            firstLoad.current = false;
 
-        if (stored === prefix || stored?.startsWith(`${prefix}/`)) {
-            setPath(stored);
-        } else {
-            setPath(prefix);
+            const stored = readPath();
+            if (stored !== null && stored.startsWith("/")) {
+                setPath(stored);
+                return;
+            }
         }
+
+        setPath("/");
     }, [hash]);
 
     useEffect(() => {
-        if (path === "/") return;
-        updateUrlState({ path });
+        writePath(path);
     }, [path]);
 
     useEffect(() => {
@@ -151,7 +173,9 @@ export function FileList({ hash }: { hash: string }) {
 
         const fetchData = async () => {
             try {
-                const result = await fetchJson(`/store/index?path=${path}`);
+                const result = await fetchJson(
+                    `/store/index?path=${storePath(hash, path)}`,
+                );
                 console.log(result);
                 setFiles(result.entries);
             } catch (err) {
@@ -160,7 +184,7 @@ export function FileList({ hash }: { hash: string }) {
         };
 
         fetchData();
-    }, [path]);
+    }, [hash, path]);
 
     return (
         <div className="w-full min-w-0 border border-[#2e2e2e] rounded-lg overflow-hidden bg-[#1c1c1c]">
@@ -180,6 +204,7 @@ export function FileList({ hash }: { hash: string }) {
                         <FileTableEntry
                             key={file.name}
                             file={file}
+                            hash={hash}
                             path={path}
                             setPath={setPath}
                         />

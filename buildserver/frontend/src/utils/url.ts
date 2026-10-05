@@ -1,36 +1,20 @@
-export type UrlState = {
-    project: string | null;
-    job: string | null;
-    task: string | null;
-    path: string | null;
-};
-
-export function readUrlState(): UrlState {
-    const params = new URLSearchParams(window.location.search);
-
-    return {
-        project: params.get("project"),
-        job: params.get("job"),
-        task: params.get("task"),
-        path: params.get("path"),
-    };
+export function readPath(): string | null {
+    return new URLSearchParams(window.location.search).get("path");
 }
 
-export function updateUrlState(update: Partial<UrlState>) {
+export function writePath(path: string | null) {
     const params = new URLSearchParams(window.location.search);
 
-    for (const [key, value] of Object.entries(update)) {
-        if (value === null) {
-            params.delete(key);
-        } else {
-            params.set(key, value);
-        }
+    if (path === null) {
+        params.delete("path");
+    } else {
+        params.set("path", path);
     }
 
     const query = params.toString();
-    window.history.replaceState(
-        null,
-        "",
-        query ? `?${query}` : window.location.pathname,
-    );
+    const url = query
+        ? `${window.location.pathname}?${query}`
+        : window.location.pathname;
+
+    window.history.replaceState(null, "", url);
 }

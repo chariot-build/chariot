@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import type { Project } from "../app";
 import Skeleton from "./skeleton";
 import { cn } from "cn";
@@ -80,7 +80,6 @@ export function Sidebar({
     refreshToken: number;
 }) {
     let [jobs, setJobs] = useState<string[] | null>(null);
-    let previousProject = useRef(selectedProject);
 
     let project_elements;
     if (projects !== null) {
@@ -104,12 +103,6 @@ export function Sidebar({
     }
 
     useEffect(() => {
-        if (previousProject.current === selectedProject) {
-            return;
-        }
-
-        previousProject.current = selectedProject;
-        setSelectedJob(null);
         setJobs(null);
     }, [selectedProject]);
 

@@ -3,32 +3,26 @@ import { Sidebar } from "./components/sidebar";
 import { fetchJson } from "./utils/fetch";
 import { JobDetails } from "./components/jobDetails";
 import { useBuildEvents } from "./utils/events";
-import { readUrlState, updateUrlState } from "./utils/url";
+import { navigate, parseRoute, routePath, usePathname } from "./utils/router";
 
 export type Project = {
     name: string;
     repository: string;
 };
 
-const initialUrlState = readUrlState();
-
 export function App() {
     let [projects, setProjects] = useState<Project[] | null>(null);
-    let [selectedProject, setSelectedProject] = useState<string | null>(
-        initialUrlState.project,
-    );
-    let [selectedJob, setSelectedJob] = useState<string | null>(
-        initialUrlState.job,
-    );
     let [refreshToken, setRefreshToken] = useState(0);
 
-    useEffect(() => {
-        updateUrlState({ project: selectedProject });
-    }, [selectedProject]);
+    const route = parseRoute(usePathname());
+    const selectedProject = route.project;
+    const selectedJob = route.job;
 
-    useEffect(() => {
-        updateUrlState({ job: selectedJob });
-    }, [selectedJob]);
+    const setSelectedProject = (value: string | null) =>
+        navigate(routePath({ project: value, job: null, task: null }));
+
+    const setSelectedJob = (value: string | null) =>
+        navigate(routePath({ project: route.project, job: value, task: null }));
 
     useEffect(() => {
         const fetchData = async () => {
