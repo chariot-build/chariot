@@ -3,17 +3,32 @@ import { Sidebar } from "./components/sidebar";
 import { fetchJson } from "./utils/fetch";
 import { JobDetails } from "./components/jobDetails";
 import { useBuildEvents } from "./utils/events";
+import { readUrlState, updateUrlState } from "./utils/url";
 
 export type Project = {
     name: string;
     repository: string;
 };
 
+const initialUrlState = readUrlState();
+
 export function App() {
     let [projects, setProjects] = useState<Project[] | null>(null);
-    let [selectedProject, setSelectedProject] = useState<string | null>(null);
-    let [selectedJob, setSelectedJob] = useState<string | null>(null);
+    let [selectedProject, setSelectedProject] = useState<string | null>(
+        initialUrlState.project,
+    );
+    let [selectedJob, setSelectedJob] = useState<string | null>(
+        initialUrlState.job,
+    );
     let [refreshToken, setRefreshToken] = useState(0);
+
+    useEffect(() => {
+        updateUrlState({ project: selectedProject });
+    }, [selectedProject]);
+
+    useEffect(() => {
+        updateUrlState({ job: selectedJob });
+    }, [selectedJob]);
 
     useEffect(() => {
         const fetchData = async () => {

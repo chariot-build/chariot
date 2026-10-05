@@ -1,8 +1,9 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { fetchJson } from "../utils/fetch";
 import { useBuildEvents } from "../utils/events";
 import { cn } from "cn";
 import { FileList } from "./fileList";
+import { readUrlState, updateUrlState } from "../utils/url";
 
 type Task = {
     id: number;
@@ -155,23 +156,39 @@ export function JobDetails({
     refreshToken: number;
 }) {
     let [tasks, setTasks] = useState<Task[]>([]);
-    let [selectedTask, setSelectedTask] = useState<number | null>(null);
+    let [selectedTask, setSelectedTask] = useState<number | null>(() => {
+        const task = readUrlState().task;
+        return task === null ? null : Number(task);
+    });
     let [taskHash, setTaskHash] = useState<string | null>(null);
+    let previousJob = useRef(selectedJob);
+
+    const selectedTaskData = tasks.find((task) => task.id === selectedTask);
 
     useEffect(() => {
+        if (previousJob.current === selectedJob) {
+            return;
+        }
+
+        previousJob.current = selectedJob;
         setTasks([]);
         setSelectedTask(null);
     }, [selectedJob]);
 
     useEffect(() => {
+        updateUrlState({
+            task: selectedTask === null ? null : String(selectedTask),
+        });
+    }, [selectedTask]);
+
+    useEffect(() => {
         setTaskHash(null);
-        let task = tasks.find((task) => task.id === selectedTask);
-        if (task === undefined) return;
+        if (selectedTaskData === undefined) return;
 
         const fetchData = async () => {
             try {
                 const result = await fetchJson(
-                    `/ledger/lookup/install/${task.input_hash}`,
+                    `/ledger/lookup/install/${selectedTaskData.input_hash}`,
                 );
                 setTaskHash(result.output_hash);
             } catch (err) {
@@ -180,7 +197,7 @@ export function JobDetails({
         };
 
         fetchData();
-    }, [selectedTask]);
+    }, [selectedTaskData?.input_hash]);
 
     useEffect(() => {
         const fetchData = async () => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { API_BASE, fetchJson } from "../utils/fetch";
 import { cn } from "cn";
+import { readUrlState, updateUrlState } from "../utils/url";
 
 type File = {
     name: string;
@@ -130,8 +131,20 @@ export function FileList({ hash }: { hash: string }) {
     let [files, setFiles] = useState<File[]>([]);
 
     useEffect(() => {
-        setPath(`/install-${hash}`);
+        const prefix = `/install-${hash}`;
+        const stored = readUrlState().path;
+
+        if (stored === prefix || stored?.startsWith(`${prefix}/`)) {
+            setPath(stored);
+        } else {
+            setPath(prefix);
+        }
     }, [hash]);
+
+    useEffect(() => {
+        if (path === "/") return;
+        updateUrlState({ path });
+    }, [path]);
 
     useEffect(() => {
         setFiles([]);
