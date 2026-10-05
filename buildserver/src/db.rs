@@ -8,6 +8,8 @@ use std::{
 
 use rusqlite::{Connection, params, types::Value};
 
+use crate::job::{JobTask, JobTaskStatus};
+
 pub struct Database(Mutex<Connection>);
 
 impl Database {
@@ -45,9 +47,10 @@ impl Database {
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 job_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                kind INTEGER NOT NULL,
                 status INTEGER NOT NULL,
 
-                FOREIGN KEY (job_id) REFERENCES job(id)
                 FOREIGN KEY(job_id) REFERENCES job(id) ON DELETE CASCADE
             ) STRICT;
 
@@ -86,7 +89,7 @@ impl Database {
 
         let id = tx.query_one(
             "INSERT INTO job (project, target_arch, status) VALUES (?, ?, ?) RETURNING id",
-            params![project, target_arch, 0 as i64],
+            params![project, target_arch, JobTaskStatus::Pending as i64],
             |row| row.get::<usize, i64>(0),
         )?;
 
@@ -97,6 +100,40 @@ impl Database {
         tx.commit()?;
 
         Ok(id)
+    }
+
+    pub fn finalize_job(&self, job_id: i64, tasks: &HashMap<usize, JobTask>) -> Result<(), rusqlite::Error> {
+        let conn = self.0.lock().unwrap();
+        let tx = conn.unchecked_transaction()?;
+
+        for task in tasks.values() {
+            tx.execute(
+                "INSERT INTO tasks (job_id, name, kind, status) VALUES (?, ?, ?, ?)",
+                params![job_id, task.name, task.kind as i64, task.status as i64],
+            )?;
+        }
+
+        tx.commit()?;
+
+        Ok(())
+    }
+
+    pub fn get_job_tasks(&self, job_id: i64) -> Result<Vec<JobTask>, rusqlite::Error> {
+        let conn = self.0.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT name, kind, status
+                 FROM tasks
+                 WHERE job_id = ?",
+        )?;
+
+        stmt.query_map([job_id], |row| {
+            Ok(JobTask {
+                name: row.get(0)?,
+                kind: (row.get::<usize, i64>(1)? as i64).try_into().expect("Invalid JobTask kind value"),
+                status: (row.get::<usize, i64>(2)? as i64).try_into().expect("Invalid JobTask status value"),
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()
     }
 
     pub fn get_project_jobs(&self, project: &str) -> Result<Vec<u64>, rusqlite::Error> {

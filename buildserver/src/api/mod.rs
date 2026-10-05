@@ -32,6 +32,10 @@ impl ApiError {
     pub fn bad_request(error: impl Into<anyhow::Error>) -> Self {
         Self::from_error(StatusCode::BAD_REQUEST, error.into())
     }
+
+    pub fn internal_server_error(error: impl Into<anyhow::Error>) -> Self {
+        Self::from_error(StatusCode::INTERNAL_SERVER_ERROR, error.into())
+    }
 }
 
 impl IntoResponse for ApiError {

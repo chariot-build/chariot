@@ -52,9 +52,24 @@ pub async fn get(State(state): State<Arc<BuildServerState>>, Path(id): Path<i64>
         None => return Err(ApiError::not_found()),
     };
 
+    let tasks = state.db.get_job_tasks(id)?;
+
+    // @todo: maybe merge this with the above logic? somehow?
+    let tasks = tasks
+        .iter()
+        .map(|task| {
+            json!({
+                "id": id,
+                "type": &task.kind.to_string(),
+                "name": task.name,
+                "status": task.status.to_string()
+            })
+        })
+        .collect::<Vec<_>>();
+
     Ok(Json(json!({
         "active": false,
         "project": job_project,
-        "tasks": []
+        "tasks": tasks
     })))
 }

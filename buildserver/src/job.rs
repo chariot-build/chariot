@@ -51,11 +51,61 @@ impl ToString for JobTaskStatus {
     }
 }
 
+// @todo: I'm sure there is a better way to do this
+impl TryFrom<i64> for JobTaskStatus {
+    type Error = i64;
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(JobTaskStatus::Pending),
+            1 => Ok(JobTaskStatus::InProgress),
+            2 => Ok(JobTaskStatus::Failed),
+            3 => Ok(JobTaskStatus::Succeeded),
+            4 => Ok(JobTaskStatus::Skipped),
+            _ => Err(value),
+        }
+    }
+}
+impl From<JobTaskStatus> for i64 {
+    fn from(value: JobTaskStatus) -> Self {
+        match value {
+            JobTaskStatus::Pending => 0,
+            JobTaskStatus::InProgress => 1,
+            JobTaskStatus::Failed => 2,
+            JobTaskStatus::Succeeded => 3,
+            JobTaskStatus::Skipped => 4,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum JobTaskKind {
     Source,
     Package,
     Tool,
+}
+
+// @todo: I'm sure there is a better way to do this
+impl TryFrom<i64> for JobTaskKind {
+    type Error = i64;
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(JobTaskKind::Source),
+            1 => Ok(JobTaskKind::Package),
+            2 => Ok(JobTaskKind::Tool),
+            _ => Err(value),
+        }
+    }
+}
+impl From<JobTaskKind> for i64 {
+    fn from(value: JobTaskKind) -> Self {
+        match value {
+            JobTaskKind::Source => 0,
+            JobTaskKind::Package => 1,
+            JobTaskKind::Tool => 2,
+        }
+    }
 }
 
 impl ToString for JobTaskKind {
@@ -234,11 +284,16 @@ pub fn run_project_build(state: &Arc<BuildServerState>, store: &Arc<Store>, proj
 
         let build_graph = graph_builder.finish();
 
-        let tracer = BuildServerTracer::new(state.clone(), job);
+        let tracer = BuildServerTracer::new(state.clone(), job.clone());
         let build_manager = BuildManager::new(&core_context, build_graph, Arc::new(tracer));
         let report = build_manager.execute(FailureMode::KeepGoing, worker_count);
 
         let _ = state.event_channel.send(BuildServerEvent::JobEnd);
+        // @todo: we need to handle if a job fails *mid* way, right now we snowball the error to the caller and that probably just panics :^)
+        state
+            .db
+            .finalize_job(job.id.clone(), &job.tasks.read().unwrap())
+            .context("Failed to finalize job")?;
         *state.current_job.write().unwrap() = None;
     }
 
