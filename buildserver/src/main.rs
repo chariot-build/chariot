@@ -109,6 +109,8 @@ async fn main() -> Result<()> {
         .route("/job/active", get(api::jobs::get_current))
         .route("/job/{id}/details", get(api::jobs::get))
         .route("/ledger/lookup/{category}/{hash}", get(api::ledger::lookup))
+        .route("/store/index", get(api::store::index))
+        .nest_service("/store/g", ServeDir::new("data/store"))
         .layer(CorsLayer::permissive())
         .with_state(state.clone())
         .fallback_service(ServeDir::new("static"));

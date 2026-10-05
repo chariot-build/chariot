@@ -30,9 +30,9 @@ pub async fn get(State(state): State<Arc<BuildServerState>>, Path(id): Path<i64>
             .read()
             .unwrap()
             .iter()
-            .map(|(id, task)| {
+            .map(|(_, task)| {
                 json!({
-                    "id": id,
+                    "id": task.id,
                     "type": &task.kind.to_string(),
                     "name": task.name,
                     "status": task.status.to_string(),
@@ -60,7 +60,7 @@ pub async fn get(State(state): State<Arc<BuildServerState>>, Path(id): Path<i64>
         .iter()
         .map(|task| {
             json!({
-                "id": id,
+                "id": task.id,
                 "type": &task.kind.to_string(),
                 "name": task.name,
                 "status": task.status.to_string(),

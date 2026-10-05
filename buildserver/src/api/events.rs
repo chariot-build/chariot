@@ -20,7 +20,7 @@ use crate::{
 pub enum BuildServerEvent {
     JobStart(i64),
     JobEnd,
-    TaskRegister(usize, JobTaskKind, String),
+    TaskRegister(i64, JobTaskKind, String, u128),
     TaskStatus(usize, JobTaskStatus),
 }
 
@@ -38,7 +38,9 @@ impl BuildServerEvent {
         match self {
             Self::JobStart(id) => json!({ "id": id }),
             Self::JobEnd => Value::Null,
-            Self::TaskRegister(id, kind, name) => json!({ "id": id, "type": kind.to_string(), "name": name}),
+            Self::TaskRegister(id, kind, name, input_hash) => {
+                json!({ "id": id, "type": kind.to_string(), "name": name, "input_hash": format!("{:x}", input_hash)})
+            }
             Self::TaskStatus(id, status) => json!({ "id": id, "status": status.to_string()}),
         }
     }

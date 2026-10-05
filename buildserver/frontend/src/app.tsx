@@ -53,13 +53,11 @@ export function App() {
                     {selectedProject}{" "}
                     {selectedJob !== null ? `- ${selectedJob}` : ""}
                 </h2>
-                {selectedJob !== null ? (
+                {selectedJob !== null && (
                     <JobDetails
                         selectedJob={selectedJob}
                         refreshToken={refreshToken}
                     />
-                ) : (
-                    <></>
                 )}
             </div>
         </>

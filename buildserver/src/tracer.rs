@@ -59,7 +59,7 @@ impl Tracer for BuildServerTracer {
         let _ = self
             .state
             .event_channel
-            .send(BuildServerEvent::TaskRegister(id.into(), task.kind, task.name.clone()));
+            .send(BuildServerEvent::TaskRegister(database_id, task.kind, task.name.clone(), task.input_hash));
 
         self.job.tasks.write().unwrap().insert(id.into(), task);
     }

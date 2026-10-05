@@ -10,6 +10,7 @@ export type BuildServerEvent =
           taskId: number;
           taskType: string;
           name: string;
+          input_hash: string;
       }
     | { type: "task_status"; jobId: number; taskId: number; status: string }
     | { type: "resync" };
@@ -51,6 +52,7 @@ function parseEvent(event: MessageEvent): BuildServerEvent | null {
                 taskId: data.id,
                 taskType: data.type,
                 name: data.name,
+                input_hash: data.input_hash,
             };
         case "task_status":
             if (currentJobId === null) {

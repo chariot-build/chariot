@@ -1,11 +1,14 @@
 import { useEffect, useState } from "preact/hooks";
 import { fetchJson } from "../utils/fetch";
 import { useBuildEvents } from "../utils/events";
+import { cn } from "cn";
+import { FileList } from "./fileList";
 
 type Task = {
     id: number;
     type: "source" | "package" | "tool";
     name: string;
+    input_hash: string;
     status:
         | "pending"
         | "in_progress"
@@ -110,9 +113,24 @@ function TaskStatusIcon({ status }: { status: Task["status"] }) {
     }
 }
 
-function JobTableEntry({ task }: { task: Task }) {
+function JobTableEntry({
+    task,
+    selectedTask,
+    setSelectedTask,
+}: {
+    task: Task;
+    selectedTask: number;
+    setSelectedTask: (task: number) => void;
+}) {
     return (
-        <tr className="border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#242424]">
+        <tr
+            onClick={() => setSelectedTask(task.id)}
+            className={cn(
+                "border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#242424]",
+                selectedTask == task.id &&
+                    "bg-[#242424] border-l-[#5b8cff] text-white font-semibold",
+            )}
+        >
             <td className="px-4 py-2.5 text-sm text-[#c9c9c9] first:w-35 first:text-xs first:font-medium first:uppercase first:tracking-[0.03em] first:text-[#9a9a9a] last:text-right last:font-semibold">
                 {task.type}
             </td>
@@ -137,10 +155,32 @@ export function JobDetails({
     refreshToken: number;
 }) {
     let [tasks, setTasks] = useState<Task[]>([]);
+    let [selectedTask, setSelectedTask] = useState<number | null>(null);
+    let [taskHash, setTaskHash] = useState<string | null>(null);
 
     useEffect(() => {
         setTasks([]);
+        setSelectedTask(null);
     }, [selectedJob]);
+
+    useEffect(() => {
+        setTaskHash(null);
+        let task = tasks.find((task) => task.id === selectedTask);
+        if (task === undefined) return;
+
+        const fetchData = async () => {
+            try {
+                const result = await fetchJson(
+                    `/ledger/lookup/install/${task.input_hash}`,
+                );
+                setTaskHash(result.output_hash);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        fetchData();
+    }, [selectedTask]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -170,6 +210,7 @@ export function JobDetails({
                         id: event.taskId,
                         type: event.taskType as Task["type"],
                         name: event.name,
+                        input_hash: event.input_hash,
                         status: "pending",
                     },
                 ];
@@ -186,24 +227,38 @@ export function JobDetails({
     });
 
     return (
-        <table className="w-full max-w-180 border-collapse bg-[#1c1c1c] border border-[#2e2e2e] rounded-lg overflow-hidden">
-            <tbody>
-                <tr className="border-b border-[#2a2a2a] last:border-b-0">
-                    <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
-                        Type
-                    </td>
-                    <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
-                        Name
-                    </td>
-                    <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
-                        Status
-                    </td>
-                </tr>
+        <div className="w-full flex flex-row items-start gap-10">
+            <div className="flex-1 min-w-0 max-w-180">
+                <table className="w-full border-collapse bg-[#1c1c1c] border border-[#2e2e2e] rounded-lg overflow-hidden">
+                    <tbody>
+                        <tr className="border-b border-[#2a2a2a] last:border-b-0">
+                            <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
+                                Type
+                            </td>
+                            <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
+                                Name
+                            </td>
+                            <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
+                                Status
+                            </td>
+                        </tr>
 
-                {tasks.map((task) => (
-                    <JobTableEntry task={task} />
-                ))}
-            </tbody>
-        </table>
+                        {tasks.map((task) => (
+                            <JobTableEntry
+                                key={task.id}
+                                selectedTask={selectedTask}
+                                setSelectedTask={setSelectedTask}
+                                task={task}
+                            />
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {taskHash !== null && (
+                <div className="flex-1 min-w-0 max-w-180">
+                    <FileList hash={taskHash} />
+                </div>
+            )}
+        </div>
     );
 }

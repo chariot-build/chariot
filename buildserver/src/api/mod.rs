@@ -7,6 +7,7 @@ pub mod events;
 pub mod jobs;
 pub mod ledger;
 pub mod meta;
+pub mod store;
 
 pub struct ApiError {
     status: StatusCode,
@@ -31,10 +32,6 @@ impl ApiError {
 
     pub fn bad_request(error: impl Into<anyhow::Error>) -> Self {
         Self::from_error(StatusCode::BAD_REQUEST, error.into())
-    }
-
-    pub fn internal_server_error(error: impl Into<anyhow::Error>) -> Self {
-        Self::from_error(StatusCode::INTERNAL_SERVER_ERROR, error.into())
     }
 }
 
