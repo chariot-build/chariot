@@ -57,11 +57,20 @@ export function App() {
                 setSelectedJob={setSelectedJob}
                 refreshToken={refreshToken}
             />
-            <div className="flex-1 px-10 py-8 overflow-y-auto">
-                <h2 className="m-0 mb-5 text-xl font-semibold text-[#f2f2f2]">
-                    {selectedProject}{" "}
-                    {selectedJob !== null ? `- ${selectedJob}` : ""}
-                </h2>
+            <div className="flex-1 overflow-y-auto px-8 py-6">
+                {selectedProject !== null && (
+                    <div className="mb-6 flex items-center gap-2 text-base">
+                        <span className="text-muted">{selectedProject}</span>
+                        {selectedJob !== null && (
+                            <>
+                                <span className="text-muted">/</span>
+                                <span className="font-medium text-fg">
+                                    {selectedJob}
+                                </span>
+                            </>
+                        )}
+                    </div>
+                )}
                 {selectedJob !== null && (
                     <JobDetails
                         selectedJob={selectedJob}

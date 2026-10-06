@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
-import { ChevronDown } from "lucide-preact";
+import { useEffect, useState } from "preact/hooks";
 import type { Project } from "../app";
 import Skeleton from "./skeleton";
 import { cn } from "cn";
@@ -21,54 +20,31 @@ export function Sidebar({
     refreshToken: number;
 }) {
     let [jobs, setJobs] = useState<string[] | null>(null);
-    let [open, setOpen] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
 
     let jobs_elements;
     if (jobs !== null) {
         jobs_elements = jobs.toReversed().map((job) => (
             <button
                 key={job}
-                className={cn(
-                    "w-[calc(100%-0.625rem)] text-left ml-2.5 px-2.5 py-1.5 pl-4 border-l-2 border-[#333] rounded-r-1.5 text-[13px] text-[#9a9a9a] hover:bg-[#242424] hover:border-l-[#5b8cff] hover:text-white ",
-                    selectedJob == job &&
-                        "bg-[#242424] border-l-[#5b8cff] text-white font-semibold",
-                )}
                 onClick={() => setSelectedJob(job)}
+                className={cn(
+                    "cursor-pointer truncate rounded-md px-2.5 py-2 text-left text-[15px] text-muted transition-colors hover:bg-elevated hover:text-fg",
+                    selectedJob === job && "bg-elevated text-fg",
+                )}
             >
                 {job}
             </button>
         ));
     } else {
         jobs_elements = [1, 2, 3].map((job) => (
-            <div
-                key={job}
-                className="w-[calc(100%-0.625rem)] ml-2.5 px-2.5 py-1.5"
-            >
-                <Skeleton variant="text" className="h-4 w-full" />
+            <div key={job} className="px-2.5 py-2">
+                <Skeleton variant="text" className="h-5 w-full" />
             </div>
         ));
     }
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                menuRef.current !== null &&
-                !menuRef.current.contains(event.target as Node)
-            ) {
-                setOpen(false);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-
-        return () =>
-            document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    useEffect(() => {
         setJobs(null);
-        setOpen(false);
     }, [selectedProject]);
 
     useEffect(() => {
@@ -91,49 +67,50 @@ export function Sidebar({
     }, [selectedProject, refreshToken]);
 
     return (
-        <div className="flex flex-col w-65 shrink-0 min-h-screen bg-[#1c1c1c] border-r border-solid border-[#1a1a1a] py-4 px-3 gap-0.5">
-            <div className="relative mt-1 mb-4" ref={menuRef}>
-                <button
-                    type="button"
-                    onClick={() => setOpen((value) => !value)}
-                    disabled={projects === null}
-                    className="flex w-full items-center justify-between gap-2 px-3 py-2 pb-3.5 text-[15px] font-semibold tracking-[0.01em] text-[#f2f2f2] border-b border-solid border-[#2e2e2e] cursor-pointer transition-[background-color,color] duration-150 ease-in-out hover:bg-[#2a2a2a] hover:text-white focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-[#5b8cff] focus-visible:-outline-offset-2 disabled:cursor-default disabled:hover:bg-transparent"
-                >
-                    <span className="truncate">
-                        {selectedProject ?? "Chariot Build Server"}
-                    </span>
-                    <ChevronDown
-                        className={cn(
-                            "size-4 shrink-0 transition-transform duration-150",
-                            open && "rotate-180",
-                        )}
-                    />
-                </button>
-                {open && projects !== null && (
-                    <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-[#2e2e2e] bg-[#242424] py-1 shadow-lg">
-                        {projects.map((project) => (
-                            <button
-                                key={project.name}
-                                type="button"
-                                onClick={() => {
-                                    setSelectedProject(project.name);
-                                    setOpen(false);
-                                }}
-                                className={cn(
-                                    "block w-full text-left px-3 py-2 text-sm text-[#c9c9c9] cursor-pointer transition-[background-color,color] duration-150 ease-in-out hover:bg-[#2a2a2a] hover:text-white",
-                                    selectedProject === project.name &&
-                                        "bg-[#2a2a2a] text-white font-semibold",
-                                )}
-                            >
-                                {project.name}
-                            </button>
-                        ))}
+        <div className="flex min-h-screen w-64 shrink-0 flex-col gap-6 bg-panel px-3 py-5">
+            <div className="flex flex-col gap-3">
+                <span className="px-2.5 text-base font-semibold text-fg">
+                    Chariot Build
+                </span>
+                <div className="h-0.5 shrink-0 bg-line" />
+            </div>
+
+            <div className="flex flex-col gap-1">
+                <span className="px-2.5 pb-1 text-sm text-muted">Projects</span>
+                {projects === null
+                    ? [1, 2, 3].map((item) => (
+                          <div key={item} className="px-2.5 py-2">
+                              <Skeleton variant="text" className="h-5 w-full" />
+                          </div>
+                      ))
+                    : projects.map((project) => (
+                          <button
+                              key={project.name}
+                              onClick={() => setSelectedProject(project.name)}
+                              className={cn(
+                                  "cursor-pointer truncate rounded-md px-2.5 py-2 text-left text-[15px] text-muted transition-colors hover:bg-elevated hover:text-fg",
+                                  selectedProject === project.name &&
+                                      "bg-elevated text-fg",
+                              )}
+                          >
+                              {project.name}
+                          </button>
+                      ))}
+            </div>
+
+            {selectedProject !== null && (
+                <>
+                    <div className="h-0.5 shrink-0 bg-line" />
+                    <div className="flex min-h-0 flex-1 flex-col gap-1">
+                        <span className="px-2.5 pb-1 text-sm text-muted">
+                            Jobs
+                        </span>
+                        <div className="flex flex-col gap-1 overflow-y-auto">
+                            {jobs_elements}
+                        </div>
                     </div>
-                )}
-            </div>
-            <div className="flex flex-col gap-0.5">
-                {selectedProject !== null ? jobs_elements : null}
-            </div>
+                </>
+            )}
         </div>
     );
 }

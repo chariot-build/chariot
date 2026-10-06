@@ -10,13 +10,13 @@ type File = {
 };
 
 function FileTypeIcon({ status }: { status: File["type"] }) {
-    const base = "size-4 shrink-0";
+    const base = "size-5 shrink-0";
 
     switch (status) {
         case "directory":
-            return <Folder className={`${base} text-[#5b8cff]`} />;
+            return <Folder className={`${base} text-accent`} />;
         case "file":
-            return <File className={`${base} text-[#9a9a9a]`} />;
+            return <File className={`${base} text-muted`} />;
     }
 }
 
@@ -37,7 +37,7 @@ function downloadFile(hash: string, path: string, name: string) {
     link.remove();
 }
 
-function FileTableEntry({
+function FileRow({
     file,
     hash,
     path,
@@ -49,7 +49,7 @@ function FileTableEntry({
     setPath: (path: string) => void;
 }) {
     return (
-        <tr
+        <button
             onClick={() => {
                 if (file.type === "directory") {
                     const segment = encodeURIComponent(file.name);
@@ -58,15 +58,13 @@ function FileTableEntry({
                     downloadFile(hash, path, file.name);
                 }
             }}
-            className="border-b border-[#2a2a2a] last:border-b-0 cursor-pointer hover:bg-[#242424]"
+            className="flex w-full cursor-pointer items-center gap-3 rounded-md px-4 py-3 text-left transition-colors hover:bg-elevated"
         >
-            <td className="w-12 px-4 py-2.5">
-                <FileTypeIcon status={file.type} />
-            </td>
-            <td className="px-4 py-2.5 text-sm text-[#c9c9c9]">
+            <FileTypeIcon status={file.type} />
+            <span className="min-w-0 flex-1 truncate text-base text-fg">
                 {file.name}
-            </td>
-        </tr>
+            </span>
+        </button>
     );
 }
 
@@ -80,15 +78,14 @@ function Breadcrumbs({
     const segments = path.split("/").filter(Boolean);
 
     return (
-        <div className="flex flex-wrap items-center gap-1 border-b border-[#2a2a2a] bg-[#1c1c1c] px-4 py-2.5 text-sm">
+        <div className="flex flex-wrap items-center gap-1 px-4 pb-3 text-base">
             <button
                 onClick={() => setPath("/")}
                 disabled={segments.length === 0}
                 className={cn(
-                    "rounded px-1 py-0.5 text-[#c9c9c9]",
-                    segments.length > 0 &&
-                        "cursor-pointer hover:bg-[#2a2a2a] hover:text-white",
-                    segments.length === 0 && "text-[#f2f2f2] font-medium",
+                    "rounded px-1 text-muted transition-colors",
+                    segments.length > 0 && "cursor-pointer hover:text-fg",
+                    segments.length === 0 && "text-fg",
                 )}
             >
                 /
@@ -99,17 +96,14 @@ function Breadcrumbs({
 
                 return (
                     <span key={target} className="flex items-center gap-1">
-                        {index > 0 && (
-                            <span className="text-[#5a5a5a]">/</span>
-                        )}
+                        {index > 0 && <span className="text-muted">/</span>}
                         <button
                             onClick={() => setPath(target)}
                             disabled={isLast}
                             className={cn(
-                                "rounded px-1 py-0.5 text-[#c9c9c9]",
-                                !isLast &&
-                                    "cursor-pointer hover:bg-[#2a2a2a] hover:text-white",
-                                isLast && "text-[#f2f2f2] font-medium",
+                                "rounded px-1 text-muted transition-colors",
+                                !isLast && "cursor-pointer hover:text-fg",
+                                isLast && "text-fg",
                             )}
                         >
                             {decodeURIComponent(segment)}
@@ -152,7 +146,6 @@ export function FileList({ hash }: { hash: string }) {
                 const result = await fetchJson(
                     `/store/index?path=${storePath(hash, path)}`,
                 );
-                console.log(result);
                 setFiles(result.entries);
             } catch (err) {
                 console.error("error");
@@ -163,30 +156,19 @@ export function FileList({ hash }: { hash: string }) {
     }, [hash, path]);
 
     return (
-        <div className="w-full min-w-0 border border-[#2e2e2e] rounded-lg overflow-hidden bg-[#1c1c1c]">
+        <div className="flex w-full min-w-0 flex-col">
             <Breadcrumbs path={path} setPath={setPath} />
-            <table className="w-full min-w-0 border-collapse">
-                <tbody>
-                    <tr className="border-b border-[#2a2a2a] last:border-b-0">
-                        <td className="w-12 px-4 py-2.5 text-xs font-medium uppercase tracking-[0.03em] text-[#9a9a9a]">
-                            Type
-                        </td>
-                        <td className="px-4 py-2.5 text-xs font-medium uppercase tracking-[0.03em] text-[#9a9a9a]">
-                            Name
-                        </td>
-                    </tr>
-
-                    {files.map((file) => (
-                        <FileTableEntry
-                            key={file.name}
-                            file={file}
-                            hash={hash}
-                            path={path}
-                            setPath={setPath}
-                        />
-                    ))}
-                </tbody>
-            </table>
+            <div className="flex flex-col gap-1">
+                {files.map((file) => (
+                    <FileRow
+                        key={file.name}
+                        file={file}
+                        hash={hash}
+                        path={path}
+                        setPath={setPath}
+                    />
+                ))}
+            </div>
         </div>
     );
 }

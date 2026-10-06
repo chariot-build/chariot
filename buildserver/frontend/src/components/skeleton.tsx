@@ -10,7 +10,7 @@ export default function Skeleton({
     return (
         <div
             className={cn(
-                "block bg-[#a0a0a0] animate-skeleton",
+                "block bg-skeleton animate-skeleton",
                 variant === "circular" ? "rounded-full" : "rounded",
                 className,
             )}

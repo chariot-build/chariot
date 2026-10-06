@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import {
     CircleCheck,
     CircleMinus,
@@ -11,6 +12,8 @@ import { fetchJson } from "../utils/fetch";
 import { useBuildEvents } from "../utils/events";
 import { cn } from "cn";
 import { FileList } from "./fileList";
+import Skeleton from "./skeleton";
+import { TaskLogs } from "./taskLogs";
 import { navigate, parseRoute, routePath, usePathname } from "../utils/router";
 
 type Task = {
@@ -28,29 +31,27 @@ type Task = {
 };
 
 function TaskStatusIcon({ status }: { status: Task["status"] }) {
-    const base = "size-4 shrink-0";
+    const base = "size-5 shrink-0";
 
     switch (status) {
         case "in_progress":
             return (
-                <LoaderCircle
-                    className={`${base} animate-spin text-[#5b8cff]`}
-                />
+                <LoaderCircle className={`${base} animate-spin text-accent`} />
             );
         case "succeeded":
-            return <CircleCheck className={`${base} text-[#3fb950]`} />;
+            return <CircleCheck className={`${base} text-ok`} />;
         case "failed":
-            return <CircleX className={`${base} text-[#f85149]`} />;
+            return <CircleX className={`${base} text-err`} />;
         case "pending":
-            return <Clock className={`${base} text-[#9a9a9a]`} />;
+            return <Clock className={`${base} text-muted`} />;
         case "skipped":
-            return <CircleMinus className={`${base} text-[#6e6e6e]`} />;
+            return <CircleMinus className={`${base} text-muted`} />;
         case "cache_hit":
-            return <DatabaseZap className={`${base} text-[#d29922]`} />;
+            return <DatabaseZap className={`${base} text-warn`} />;
     }
 }
 
-function JobTableEntry({
+function JobRow({
     task,
     selectedTask,
     setSelectedTask,
@@ -60,27 +61,48 @@ function JobTableEntry({
     setSelectedTask: (task: number) => void;
 }) {
     return (
-        <tr
+        <button
             onClick={() => setSelectedTask(task.id)}
             className={cn(
-                "border-b border-[#2a2a2a] last:border-b-0 hover:bg-[#242424]",
-                selectedTask == task.id &&
-                    "bg-[#242424] border-l-[#5b8cff] text-white font-semibold",
+                "flex w-full cursor-pointer items-center gap-4 rounded-md px-4 py-3 text-left transition-colors hover:bg-elevated",
+                selectedTask === task.id && "bg-elevated",
             )}
         >
-            <td className="px-4 py-2.5 text-sm text-[#c9c9c9] first:w-35 first:text-xs first:font-medium first:uppercase first:tracking-[0.03em] first:text-[#9a9a9a] last:text-right last:font-semibold">
+            <span className="w-20 shrink-0 text-sm text-muted">
                 {task.type}
-            </td>
-            <td className="px-4 py-2.5 text-sm text-[#c9c9c9] first:w-35 first:text-xs first:font-medium first:uppercase first:tracking-[0.03em] first:text-[#9a9a9a] last:text-right last:font-semibold">
+            </span>
+            <span className="min-w-0 flex-1 truncate text-base text-fg">
                 {task.name}
-            </td>
-            <td className="px-4 py-2.5 text-sm text-[#c9c9c9] first:w-35 first:text-xs first:font-medium first:uppercase first:tracking-[0.03em] first:text-[#9a9a9a] last:text-right last:font-semibold">
-                <span className="inline-flex w-full items-center justify-end gap-1.5">
-                    <TaskStatusIcon status={task.status} />
-                    {task.status}
-                </span>
-            </td>
-        </tr>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted">
+                <TaskStatusIcon status={task.status} />
+                {task.status}
+            </span>
+        </button>
+    );
+}
+
+function TabButton({
+    active,
+    onClick,
+    children,
+}: {
+    active: boolean;
+    onClick: () => void;
+    children: ComponentChildren;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className={cn(
+                "cursor-pointer border-b pb-1 transition-colors",
+                active
+                    ? "border-fg text-fg"
+                    : "border-transparent text-muted hover:text-fg",
+            )}
+        >
+            {children}
+        </button>
     );
 }
 
@@ -92,7 +114,9 @@ export function JobDetails({
     refreshToken: number;
 }) {
     let [tasks, setTasks] = useState<Task[]>([]);
+    let [loading, setLoading] = useState(true);
     let [taskHash, setTaskHash] = useState<string | null>(null);
+    let [tab, setTab] = useState<"logs" | "files">("logs");
 
     const route = parseRoute(usePathname());
     const selectedTask = route.task === null ? null : Number(route.task);
@@ -109,7 +133,12 @@ export function JobDetails({
     const selectedTaskData = tasks.find((task) => task.id === selectedTask);
 
     useEffect(() => {
+        setTab("logs");
+    }, [selectedTask]);
+
+    useEffect(() => {
         setTasks([]);
+        setLoading(true);
     }, [selectedJob]);
 
     useEffect(() => {
@@ -137,6 +166,8 @@ export function JobDetails({
                 setTasks(result.tasks);
             } catch (err) {
                 console.error(err);
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -175,38 +206,87 @@ export function JobDetails({
     });
 
     return (
-        <div className="w-full flex flex-row items-start gap-10">
-            <div className="flex-1 min-w-0 max-w-180">
-                <table className="w-full border-collapse bg-[#1c1c1c] border border-[#2e2e2e] rounded-lg overflow-hidden">
-                    <tbody>
-                        <tr className="border-b border-[#2a2a2a] last:border-b-0">
-                            <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
-                                Type
-                            </td>
-                            <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
-                                Name
-                            </td>
-                            <td className="px-4 py-2.5 first:w-35 text-xs font-medium lowercase tracking-[0.03em] text-[#9a9a9a] last:text-right">
-                                Status
-                            </td>
-                        </tr>
-
-                        {tasks.map((task) => (
-                            <JobTableEntry
-                                key={task.id}
-                                selectedTask={selectedTask}
-                                setSelectedTask={setSelectedTask}
-                                task={task}
-                            />
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            {taskHash !== null && (
-                <div className="flex-1 min-w-0 max-w-180">
-                    <FileList hash={taskHash} />
+        <div className="flex w-full flex-col gap-8">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+                <div className="flex min-w-0 flex-1 flex-col gap-1 lg:max-w-md">
+                    {loading
+                        ? [1, 2, 3].map((item) => (
+                              <div key={item} className="px-4 py-3">
+                                  <Skeleton
+                                      variant="text"
+                                      className="h-5 w-full"
+                                  />
+                              </div>
+                          ))
+                        : tasks.map((task) => (
+                              <JobRow
+                                  key={task.id}
+                                  selectedTask={selectedTask}
+                                  setSelectedTask={setSelectedTask}
+                                  task={task}
+                              />
+                          ))}
                 </div>
-            )}
+
+                <div className="h-0.5 w-full shrink-0 bg-line lg:h-auto lg:w-0.5 lg:self-stretch" />
+
+                <div className="flex min-w-0 flex-1 flex-col gap-4">
+                    {selectedTaskData === undefined ? (
+                        <div className="py-10 text-sm text-muted">
+                            Select a task to view its logs.
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex items-baseline justify-between gap-4">
+                                <div className="min-w-0">
+                                    <div className="truncate text-base text-fg">
+                                        {selectedTaskData.name}
+                                    </div>
+                                    <div className="text-sm text-muted">
+                                        {selectedTaskData.type}
+                                    </div>
+                                </div>
+                                <span className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted">
+                                    <TaskStatusIcon
+                                        status={selectedTaskData.status}
+                                    />
+                                    {selectedTaskData.status}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-4 text-sm">
+                                <TabButton
+                                    active={tab === "logs"}
+                                    onClick={() => setTab("logs")}
+                                >
+                                    Logs
+                                </TabButton>
+                                <TabButton
+                                    active={tab === "files"}
+                                    onClick={() => setTab("files")}
+                                >
+                                    Files
+                                </TabButton>
+                            </div>
+
+                            {tab === "logs" ? (
+                                <TaskLogs
+                                    id={selectedTaskData.id}
+                                    name={selectedTaskData.name}
+                                    type={selectedTaskData.type}
+                                    status={selectedTaskData.status}
+                                />
+                            ) : taskHash !== null ? (
+                                <FileList hash={taskHash} />
+                            ) : (
+                                <div className="py-10 text-sm text-muted">
+                                    No files available.
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
