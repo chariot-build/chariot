@@ -34,11 +34,10 @@ pub fn run(install_opts: InstallOptions, local_config: &CliConfig) -> Result<()>
 
     let manager = match run_build(&ctx, Arc::new(CliTracer::new(terminal.clone())), &selected_packages, &[], mode) {
         Ok(manager) => manager,
-        Err(err) => {
-            drop(render_handle);
-            return Err(err);
-        }
+        Err(err) => return Err(err),
     };
+
+    drop(render_handle);
 
     make_path(&install_opts.dest)?;
 
