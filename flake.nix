@@ -23,10 +23,7 @@
                         rustup
                         clang
                         lld
-
                         sqlitebrowser
-
-                        bun
                     ];
                 };
             });
@@ -48,7 +45,7 @@
 
                     meta = {
                         description = "Modern meta build system for bootstrapping operating system distributions.";
-                        homepage = "https://github.com/elysium-os/chariot";
+                        homepage = "https://github.com/chariot-build/chariot";
                         license = pkgs.lib.licenses.bsd3;
                         maintainers = with pkgs.lib.maintainers; [ wux ];
                     };
