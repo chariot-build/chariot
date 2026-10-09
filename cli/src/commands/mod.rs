@@ -19,7 +19,7 @@ pub mod support;
 pub fn run_cli() -> Result<()> {
     let opts = ChariotOptions::parse();
 
-    let local_config = parse_cli_config(&opts.local_config).context("Failed to parse local config")?;
+    let local_config = parse_cli_config(&opts.local_config, opts.local_config_format).context("Failed to parse local config")?;
 
     match opts.command {
         MainCommand::Install(install_opts) => commands::install::run(install_opts, &local_config),

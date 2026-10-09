@@ -16,11 +16,20 @@ const ARG_ROOTFS_ENV: &str = "CHARIOT_ROOTFS_PATH";
 const ARG_BASECONFIG_HELP: &str = "path to chariot base config";
 const ARG_BASECONFIG_ENV: &str = "CHARIOT_BASE_CONFIG_PATH";
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+pub enum LocalConfigFormat {
+    Toml,
+    Json,
+}
+
 #[derive(Parser)]
 #[command(version, next_line_help = true)]
 pub struct ChariotOptions {
     #[arg(long, help = "path to local config", default_value = ".chariot.toml")]
     pub local_config: String,
+
+    #[arg(long, help = "format of the local config", default_value = "toml")]
+    pub local_config_format: LocalConfigFormat,
 
     #[command(subcommand)]
     pub command: MainCommand,

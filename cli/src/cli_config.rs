@@ -8,6 +8,8 @@ use anyhow::Result;
 use chariot_config::SourceOverride;
 use serde::Deserialize;
 
+use crate::args::LocalConfigFormat;
+
 #[derive(Deserialize, Clone)]
 #[serde(untagged)]
 pub enum OverrideConfig {
@@ -60,12 +62,17 @@ impl CliConfig {
     }
 }
 
-pub fn parse_cli_config(path: impl AsRef<Path>) -> Result<CliConfig> {
+pub fn parse_cli_config(path: impl AsRef<Path>, format: LocalConfigFormat) -> Result<CliConfig> {
     if !exists(&path)? {
         return Ok(CliConfig::default());
     }
 
     let data = read_to_string(&path)?;
-    let config = toml::from_str::<CliConfig>(&data)?;
+
+    let config = match format {
+        LocalConfigFormat::Toml => toml::from_str::<CliConfig>(&data)?,
+        LocalConfigFormat::Json => serde_json::from_str::<CliConfig>(&data)?,
+    };
+
     Ok(config)
 }
