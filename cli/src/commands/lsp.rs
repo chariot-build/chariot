@@ -13,7 +13,7 @@ use chariot_core::{
     config::{
         package::{Package, PackagePlatform},
         script::{Script, ScriptLanguage},
-        source::Source,
+        source::{Source, SourceBase},
     },
     execenv::{EXECENV_SOURCE_DIRECTORY_PATH, EXECENV_SOURCES_DIRECTORY_PATH, EXECENV_SYSROOT_DIRECTORY_PATH, ExecEnv},
     package::PACKAGE_BUILD_DIR,
@@ -210,7 +210,22 @@ pub fn run(lsp_options: LspOptions, local_config: &CliConfig) -> Result<()> {
 
                     merged_source_workdirs.push(source_merge_workdir);
                 } else {
-                    mappings.push((paths[0].clone(), dest));
+                    if let SourceBase::Local(local) = &source.base
+                        && paths.len() == 1
+                    {
+                        source_map_mounts.push(Mount {
+                            dest: dest.clone(),
+                            kind: MountKind::Bind {
+                                from: local.original_path.clone(),
+                                read_only: true,
+                                is_file: false,
+                            },
+                        });
+
+                        mappings.push((local.original_path.clone(), dest));
+                    } else {
+                        mappings.push((paths[0].clone(), dest));
+                    }
                 }
             }
         }

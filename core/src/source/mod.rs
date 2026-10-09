@@ -62,7 +62,7 @@ pub(crate) fn fetch(
                     })?,
                     SourceBase::Local(local_source) => {
                         let work_dir = WorkDirectory::create(&ctx.workdir_parent)?;
-                        copy_recursive(&local_source.path, work_dir.path())?;
+                        copy_recursive(&local_source.cached_path, work_dir.path())?;
                         work_dir
                     }
                 }

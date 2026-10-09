@@ -39,7 +39,8 @@ pub struct GitSource {
 /// dropped. The hash will not be validated, it is taken at face value.
 #[derive(Debug)]
 pub struct LocalSource {
-    pub path: PathBuf,
+    pub original_path: PathBuf,
+    pub cached_path: PathBuf,
     pub hash: u128,
 }
 

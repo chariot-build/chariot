@@ -108,7 +108,7 @@ fn make_local_source(local_source_storage: &Path, from_path: &Path) -> Result<Lo
 
     let tmp_dir = local_source_storage.join(".tmp");
     force_rm(&tmp_dir)?;
-    copy_recursive(path, &tmp_dir)?;
+    copy_recursive(&path, &tmp_dir)?;
 
     let mut hasher = Xxh3::new();
     hash_directory(&tmp_dir, &mut hasher)?;
@@ -129,7 +129,11 @@ fn make_local_source(local_source_storage: &Path, from_path: &Path) -> Result<Lo
         source: err,
     })?;
 
-    Ok(LocalSource { path: final_dir, hash })
+    Ok(LocalSource {
+        original_path: path,
+        cached_path: final_dir,
+        hash,
+    })
 }
 
 pub fn eval_lua_config(
