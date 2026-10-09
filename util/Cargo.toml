@@ -3,6 +3,7 @@ name = "chariot_util"
 edition = "2024"
 version.workspace = true
 authors.workspace = true
+license.workspace = true
 
 [dependencies]
 nix = { workspace = true, features = ["fs"] }

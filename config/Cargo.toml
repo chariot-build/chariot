@@ -3,6 +3,7 @@ name = "chariot_config"
 edition = "2024"
 version.workspace = true
 authors.workspace = true
+license.workspace = true
 
 [dependencies]
 chariot_core.workspace = true

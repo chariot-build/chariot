@@ -13,6 +13,7 @@ default-members = ["cli"]
 [workspace.package]
 version = "0.1.0"
 authors = ["WuX"]
+license = "BSD-3-Clause"
 
 [workspace.dependencies]
 chariot_config = { path = "config" }
