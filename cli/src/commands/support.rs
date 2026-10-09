@@ -10,11 +10,18 @@ use serde_json::json;
 
 use crate::args::{ChariotOptions, SupportCommand};
 
+const LICENSE: &str = include_str!("../../../LICENSE");
+const THIRD_PARTY: &str = include_str!("../../../THIRD_PARTY_NOTICES.md");
+
 pub fn run(command: SupportCommand) -> Result<()> {
     match command {
         SupportCommand::SetupLSP { support_dir } => setup_lua_lsp(&support_dir),
         SupportCommand::Completions { shell } => {
             generate(shell, &mut ChariotOptions::command(), "chariot".to_string(), &mut io::stdout());
+            Ok(())
+        }
+        SupportCommand::Licenses => {
+            info!("Chariot license and third party notices\n{}\n{}", LICENSE, THIRD_PARTY);
             Ok(())
         }
     }

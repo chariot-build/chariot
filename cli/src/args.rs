@@ -136,6 +136,9 @@ pub enum SupportCommand {
         #[arg(help = "shell to generate completions for", value_parser = value_parser!(Shell))]
         shell: Shell,
     },
+
+    #[command(about = "print out license and third party notices")]
+    Licenses,
 }
 
 #[derive(Args)]
