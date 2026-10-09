@@ -21,7 +21,7 @@ There are several ways to install Chariot:
 Then use the `chariot` command
 
 ### For developers
-A minimal project using chariot will have the primary config file `chariot_config.toml` and the main script file called `chariot.lua`.  
+A minimal project using chariot will have the primary config file `chariot_config.toml` and the main script file called `chariot.lua`.
 
 #### `chariot_config.toml`
 ```toml
@@ -29,6 +29,7 @@ A minimal project using chariot will have the primary config file `chariot_confi
 version = "debian/20260901T000000Z"
 hash = "7a9147a2fce8ac2bae29fcde0b822ce613ffc73b66acf080c70301f386afee81"
 ```
+
 This file defines a few global options but the only required one is to define the rootfs as in the above example. It defines the name/version of it and the hash so it can be verified properly.
 
 #### `chariot.lua`
@@ -61,6 +62,7 @@ Tool {
     ]]
 }
 ```
+
 This file is the lua file that is executed first. It can use `require` to import other files but for this example the primary config will only build one host tool of NASM.
 
 The basic structure of defining a package is using the `Tool` or `Package` function with the arguments needed. The function returns a reference to the package so it can be used within the `dependencies` of another. `Source` works the same but can be inlined if it does not need to be exported.
@@ -69,3 +71,6 @@ Running `chariot install --arch x86_64 --tool nasm /tmp/nasm` will trigger the p
 
 ## Documentation
 The previous sections should be enough to get started but if you are still unsure on how to proceed or just want to learn about more features chariot has check the documentation at [chariot-build.dev](https://chariot-build.dev)
+
+## Licensing
+Chariot is licensed under BSD-3-Clause itself and discloses third party licenses of crates under [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
