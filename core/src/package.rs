@@ -206,12 +206,6 @@ pub(crate) fn build(
         return Ok(Outcome::Built(TaskOutput::Package(store_entry)));
     }
 
-    let runtime_deps = package
-        .runtime_dependencies
-        .iter()
-        .map(|pkg| format!("{}>={}_{}", pkg.name, pkg.version, pkg.revision)) // TODO: this is xbps specific and should be done in xbps.rs somehow
-        .collect::<Vec<_>>();
-
     let workdir = WorkDirectory::create(&ctx.workdir_parent)?;
     let mut logger = tracer.package_step(id, PackageStep::Package);
     package_create(
@@ -220,7 +214,11 @@ pub(crate) fn build(
         &package.version,
         package.revision,
         package.get_arch(),
-        runtime_deps.iter().map(|str| str.as_str()).collect(),
+        package
+            .runtime_dependencies
+            .iter()
+            .map(|pkg| (pkg.name.as_str(), pkg.version.as_str(), pkg.revision))
+            .collect(),
         &install_store_entry.path(),
         &workdir.path(),
         &mut logger,

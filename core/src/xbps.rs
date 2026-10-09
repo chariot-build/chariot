@@ -83,7 +83,7 @@ pub fn package_create(
     version: &str,
     revision: usize,
     arch: &str,
-    runtime_dependencies: Vec<&str>,
+    runtime_dependencies: Vec<(&str, &str, usize)>,
     from_dir: &Path,
     dest_dir: &Path,
     logger: &mut dyn Write,
@@ -91,6 +91,11 @@ pub fn package_create(
     validate_package_name(name)?;
     validate_package_version(version)?;
     validate_arch(arch)?;
+
+    let runtime_dependencies = runtime_dependencies
+        .iter()
+        .map(|(name, version, revision)| format!("{}>={}_{}", name, version, revision))
+        .collect::<Vec<_>>();
 
     for rdep in &runtime_dependencies {
         if rdep.chars().any(|c| c.is_whitespace()) {
