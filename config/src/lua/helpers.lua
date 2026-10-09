@@ -2,9 +2,8 @@
 --- @param url string
 --- @param checksum string
 --- @param kind string?
---- @param compression string?
 --- @return ArchiveSource
-function Archive(url, checksum, kind, compression)
+function Archive(url, checksum, kind)
     if type(url) ~= "string" then
         error("archive url must be a string")
     end
@@ -14,28 +13,14 @@ function Archive(url, checksum, kind, compression)
     end
 
     if kind == nil then
-        local urlParts = url:split(".")
-        if #urlParts >= 2 then
-            local part = urlParts[#urlParts - 1]
-            if part == "tar" then
-                kind = "tar"
-            end
-        end
+        local path = url:gsub("[?#].*$", ""):lower()
 
-        if kind == nil then
-            error("could not infer archive kind from url")
-        end
-    end
-
-    if compression == nil then
-        if url:ends_with(".gz") then
-            compression = "gz"
-        elseif url:ends_with(".xz") then
-            compression = "xz"
-        elseif url:ends_with(".bz2") then
-            compression = "bzip2"
+        if path:match("%.tar%.%w+$") or path:match("%.tgz$") or path:match("%.tar$") then
+            kind = "tar"
+        elseif path:match("%.zip$") then
+            kind = "zip"
         else
-            error("could not infer archive compression from url")
+            error("could not infer archive kind from url: " .. url)
         end
     end
 
@@ -44,7 +29,6 @@ function Archive(url, checksum, kind, compression)
         url = url,
         checksum = checksum,
         kind = kind,
-        compression = compression
     }
 end
 

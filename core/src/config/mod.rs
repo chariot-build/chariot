@@ -11,7 +11,7 @@ pub mod source;
 
 /// Describes the config version. If the config format changes
 /// in a backwards incompatible way, this version should be bumped.
-const CONFIG_VERSION: u64 = 8;
+const CONFIG_VERSION: u64 = 9;
 
 #[derive(Debug, Default, Clone)]
 pub struct Dependencies {

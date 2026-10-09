@@ -14,7 +14,7 @@ use crate::{
     CoreContext,
     config::{
         script::Script,
-        source::{Archive, ArchiveCompression, ArchiveKind},
+        source::{Archive, ArchiveKind},
     },
     workdir::WorkDirectory,
 };
@@ -58,9 +58,9 @@ pub fn fetch_archive(ctx: &CoreContext, logger: &mut dyn Write, archive: &Archiv
     extract_archive(
         &ctx.rootfs,
         ctx.bsdtar_pkgset.as_deref(),
+        ctx.unzip_pkgset.as_deref(),
         logger,
         &archive.kind,
-        &archive.compression,
         &archive_path,
         &work_directory.path(),
     )?;
@@ -131,20 +131,18 @@ pub fn download_archive(
 pub fn extract_archive(
     rootfs: &Arc<RootFS>,
     bsdtar_pkgset: Option<&CachedPkgSet>,
+    unzip_pkgset: Option<&CachedPkgSet>,
     logger: &mut dyn Write,
     kind: &ArchiveKind,
-    compression: &ArchiveCompression,
     src: &Path,
     dest: &Path,
 ) -> Result<(), ArchiveFetchError> {
-    match kind {
-        ArchiveKind::Tar => {}
-    }
-
-    let compression_flag = match compression {
-        ArchiveCompression::Gzip => "--gzip",
-        ArchiveCompression::Xz => "--xz",
-        ArchiveCompression::Bzip2 => "--bzip2",
+    let (pkgset, script) = match kind {
+        ArchiveKind::Tar => (
+            bsdtar_pkgset,
+            Script::bash("bsdtar --no-same-owner --strip-components 1 -x -C /chariot/dest -f /chariot/source"),
+        ),
+        ArchiveKind::Zip => (unzip_pkgset, Script::bash("unzip -o /chariot/source -d /chariot/dest")),
     };
 
     let exit_code = rootfs.exec(
@@ -177,12 +175,8 @@ pub fn extract_archive(
         false,
         Some(logger),
         StderrTarget::Merge,
-        Script::bash(format!(
-            "bsdtar --no-same-owner --strip-components 1 -x {} -C /chariot/dest -f /chariot/source",
-            compression_flag
-        ))
-        .command(),
-        bsdtar_pkgset,
+        script.command(),
+        pkgset,
         true,
         None,
         vec![],

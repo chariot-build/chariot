@@ -1,16 +1,10 @@
 ---@meta
 
----@alias ArchiveCompression
----| '"gz"'
----| '"xz"'
----| '"bzip2"'
-
 ---@class ArchiveSource
 ---@field type '"archive"'
 ---@field url string
 ---@field checksum string
 ---@field kind '"tar"'
----@field compression ArchiveCompression
 
 ---@class GitSource
 ---@field type '"git"'

@@ -143,7 +143,7 @@ pub fn prepare_build(
     let build_cache = Arc::new(cache.open_build_cache()?);
 
     let mut binary_to_pkgset: HashMap<&str, Option<Arc<CachedPkgSet>>> = HashMap::new();
-    for binary in ["bsdtar", "git", "patch", "sha256sum", "wget"] {
+    for binary in ["bsdtar", "unzip", "git", "patch", "sha256sum", "wget"] {
         let Some(pkg) = rootfs.lookup_package_of_binary(binary) else {
             bail!("This rootfs manifest is missing a required package mapping for the `{}` binary", binary);
         };
@@ -184,6 +184,7 @@ pub fn prepare_build(
         parallelism: build_opts.parallelism,
         jobserver,
         bsdtar_pkgset: binary_to_pkgset.remove("bsdtar").unwrap(),
+        unzip_pkgset: binary_to_pkgset.remove("unzip").unwrap(),
         git_pkgset: binary_to_pkgset.remove("git").unwrap(),
         patch_pkgset: binary_to_pkgset.remove("patch").unwrap(),
         sha256sum_pkgset: binary_to_pkgset.remove("sha256sum").unwrap(),

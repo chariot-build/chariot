@@ -10,7 +10,7 @@ use chariot_core::config::{
     Config, Dependencies, GlobalEnvironment,
     package::{Package, PackagePlatform},
     script::{Script, ScriptLanguage},
-    source::{Archive, ArchiveCompression, ArchiveKind, GitSource, LocalSource, Source, SourceBase, SourcePrepare},
+    source::{Archive, ArchiveKind, GitSource, LocalSource, Source, SourceBase, SourcePrepare},
 };
 use chariot_util::{
     fs::{FileSystemError, copy_recursive, dir_entries, force_rm, join_soft},
@@ -226,28 +226,14 @@ pub fn eval_lua_config(
                             let url = base.get::<String>("url").context("`url` must be a string")?;
                             let checksum = base.get::<String>("checksum").context("`checksum` must be a string")?;
                             let kind = base.get::<String>("kind").context("`kind` must be a string")?;
-                            let compression = base.get::<String>("compression").context("`compression` must be a string")?;
 
                             let kind = match kind.as_str() {
                                 "tar" => ArchiveKind::Tar,
+                                "zip" => ArchiveKind::Zip,
                                 _ => return Err(Error::runtime(format!("invalid archive kind `{}`", kind))),
                             };
 
-                            let compression = match compression.as_str() {
-                                "gz" => ArchiveCompression::Gzip,
-                                "xz" => ArchiveCompression::Xz,
-                                "bzip2" => ArchiveCompression::Bzip2,
-                                _ => return Err(Error::runtime(format!("invalid archive compression `{}`", compression))),
-                            };
-
-                            let archive = Archive {
-                                url,
-                                checksum,
-                                kind,
-                                compression,
-                            };
-
-                            SourceBase::Archive(archive)
+                            SourceBase::Archive(Archive { url, checksum, kind })
                         }
                         "git" => {
                             let url = base.get::<String>("url").context("`url` must be a string")?;

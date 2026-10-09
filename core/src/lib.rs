@@ -42,6 +42,7 @@ pub struct CoreContext {
     pub wget_pkgset: Option<Arc<CachedPkgSet>>,
     pub sha256sum_pkgset: Option<Arc<CachedPkgSet>>,
     pub bsdtar_pkgset: Option<Arc<CachedPkgSet>>,
+    pub unzip_pkgset: Option<Arc<CachedPkgSet>>,
     pub patch_pkgset: Option<Arc<CachedPkgSet>>,
 }
 

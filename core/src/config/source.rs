@@ -14,19 +14,12 @@ pub struct Archive {
     pub url: String,
     pub checksum: String,
     pub kind: ArchiveKind,
-    pub compression: ArchiveCompression,
 }
 
 #[derive(Debug, Hash)]
 pub enum ArchiveKind {
     Tar,
-}
-
-#[derive(Debug, Hash)]
-pub enum ArchiveCompression {
-    Xz,
-    Gzip,
-    Bzip2,
+    Zip,
 }
 
 #[derive(Debug, Hash)]
