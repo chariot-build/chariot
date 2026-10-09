@@ -255,8 +255,7 @@ fn is_terminator(b: &u8) -> bool {
 fn sanitize(str: &str) -> String {
     let str = strip_ansi_codes(str);
     let mut out = String::new();
-    let mut chars = str.chars().peekable();
-    while let Some(c) = chars.next() {
+    for c in str.chars() {
         match c {
             '\t' => out.push(' '),
             c if c.is_control() => {}
