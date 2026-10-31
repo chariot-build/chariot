@@ -1,4 +1,4 @@
-use std::process::exit;
+use std::process::{ExitCode, exit};
 
 use console::{Color, style};
 use log::{Level, LevelFilter, Log, error};
@@ -51,7 +51,7 @@ extern "C" fn handle_sigint(_: nix::libc::c_int) {
     exit(1);
 }
 
-fn main() {
+fn main() -> ExitCode {
     unsafe { signal(Signal::SIGINT, SigHandler::Handler(handle_sigint)) }.unwrap();
 
     log::set_logger(&LOGGER)
@@ -73,6 +73,8 @@ fn main() {
             }
         }
 
-        exit(1);
+        return ExitCode::FAILURE;
     }
+
+    ExitCode::SUCCESS
 }
