@@ -19,13 +19,7 @@ use crate::runtime::runtime_execute_bare;
 #[cfg(not(all(target_os = "linux")))]
 compile_error!("Chariot runtime only supports linux.");
 
-const FILESYSTEMS: &[(&str, &str)] = &[
-    ("/dev/pts", "devpts"),
-    ("/dev/shm", "tmpfs"),
-    ("/run", "tmpfs"),
-    ("/tmp", "tmpfs"),
-    ("/proc", "proc"),
-];
+const FILESYSTEMS: &[(&str, &str)] = &[("/dev/pts", "devpts"), ("/dev/shm", "tmpfs"), ("/run", "tmpfs"), ("/tmp", "tmpfs")];
 
 const BOUND_DEVICE_FILES: &[&str] = &["tty", "random", "urandom", "null", "zero", "full"];
 
@@ -190,6 +184,24 @@ pub fn runtime_execute(
         additional_mounts.push(Mount {
             dest: PathBuf::from(path),
             kind: MountKind::FS { fstype: String::from(*fs) },
+        });
+    }
+
+    if pid_isolation {
+        additional_mounts.push(Mount {
+            dest: PathBuf::from("/proc"),
+            kind: MountKind::FS {
+                fstype: String::from("proc"),
+            },
+        });
+    } else {
+        additional_mounts.push(Mount {
+            dest: PathBuf::from("/proc"),
+            kind: MountKind::Bind {
+                from: PathBuf::from("/proc"),
+                read_only: false,
+                is_file: false,
+            },
         });
     }
 
