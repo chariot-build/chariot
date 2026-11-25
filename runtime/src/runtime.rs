@@ -37,6 +37,7 @@ pub(super) fn runtime_execute_bare(
     mounts: Vec<&Mount>,
     environment: HashMap<impl AsRef<OsStr>, impl AsRef<OsStr>>,
     network_isolation: bool,
+    pid_isolation: bool,
     pipe_stdin: bool,
     mut stdout: Option<&mut dyn Write>,
     mut stderr: StderrTarget<'_>,
@@ -124,6 +125,7 @@ pub(super) fn runtime_execute_bare(
             child(
                 rootfs_path,
                 network_isolation,
+                pid_isolation,
                 uid,
                 gid,
                 cwd.as_ref(),
@@ -141,6 +143,7 @@ pub(super) fn runtime_execute_bare(
 fn child(
     rootfs_path: impl AsRef<Path>,
     network_isolation: bool,
+    pid_isolation: bool,
     uid: Uid,
     gid: Gid,
     cwd: &Path,
@@ -171,7 +174,9 @@ fn child(
     setgid(gid).expect("setgid failed");
     setuid(uid).expect("setuid failed");
 
-    unshare(CloneFlags::CLONE_NEWPID).expect("unshare pid failed");
+    if pid_isolation {
+        unshare(CloneFlags::CLONE_NEWPID).expect("unshare pid failed");
+    }
 
     let fork_result = unsafe { fork() }.expect("init process fork failed");
     match fork_result {

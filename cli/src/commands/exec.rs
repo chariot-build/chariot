@@ -159,6 +159,8 @@ pub fn run(exec_options: ExecOptions, local_config: &CliConfig) -> Result<()> {
         exec_options.cwd,
         mounts.iter().collect(),
         &exec_options.env_var.iter().map(|(var, value)| (var.as_str(), value.as_str())).collect(),
+        exec_options.isolate_network,
+        exec_options.isolate_pid,
         exec_options.stdin,
         match exec_options.no_stdout {
             true => None,

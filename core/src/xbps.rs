@@ -138,6 +138,8 @@ pub fn package_create(
             ("PKG_RDEPS", runtime_dependencies.join(" ").as_str())
         ]),
         false,
+        true,
+        false,
         Some(logger),
         StderrTarget::Merge,
         vec![
@@ -180,6 +182,8 @@ pub fn package_create(
             ("PKG_VER", version),
             ("PKG_REV", revision.to_string().as_str()),
         ]),
+        false,
+        true,
         false,
         Some(logger),
         StderrTarget::Merge,
@@ -282,6 +286,8 @@ pub fn package_install(
             ("PKG_VER", version),
             ("PKG_REV", revision.to_string().as_str()),
         ]),
+        false,
+        true,
         false,
         Some(logger),
         StderrTarget::Merge,

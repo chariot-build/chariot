@@ -101,6 +101,8 @@ pub(crate) fn fetch(
                         ],
                         &HashMap::from([("CHARIOT_PATCH", patch)]),
                         false,
+                        true,
+                        false,
                         Some(&mut logger),
                         StderrTarget::Merge,
                         bash_command("echo \"$CHARIOT_PATCH\" | patch -p1"),
@@ -194,6 +196,8 @@ pub(crate) fn fetch(
                     .map(|(k, v)| (k.as_str(), v.as_str()))
                     .chain([("SOURCE_DIR", "/chariot/source")])
                     .collect(),
+                false,
+                true,
                 false,
                 Some(&mut logger),
                 StderrTarget::Merge,

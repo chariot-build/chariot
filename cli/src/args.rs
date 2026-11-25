@@ -233,6 +233,12 @@ pub struct ExecOptions {
     #[arg(long, help = "forward stderr from execution environment")]
     pub no_stderr: bool,
 
+    #[arg(long, help = "isolate network namespace from host")]
+    pub isolate_network: bool,
+
+    #[arg(long, help = "isolate PID namespace from host", default_value_t = true)]
+    pub isolate_pid: bool,
+
     #[arg(help = "script to execute")]
     pub command: String,
 }

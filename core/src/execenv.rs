@@ -169,6 +169,8 @@ impl<'a> ExecEnv<'a> {
         cwd: impl AsRef<Path>,
         mounts: Vec<&Mount>,
         environment: &HashMap<impl AsRef<str>, impl AsRef<str>>,
+        isolate_network: bool,
+        isolate_pid: bool,
         stdin: bool,
         stdout: Option<&mut dyn Write>,
         stderr: StderrTarget<'_>,
@@ -238,11 +240,7 @@ impl<'a> ExecEnv<'a> {
         final_mounts.push(&mountpoint_readonly_remount);
 
         let parallelism_string = self.ctx.parallelism.to_string();
-        let makeflags_string = format!(
-            "--jobserver-auth=fifo:{} -j{}",
-            EXECENV_JOBSERVER_PATH,
-            self.ctx.jobserver.total()
-        );
+        let makeflags_string = format!("--jobserver-auth=fifo:{} -j{}", EXECENV_JOBSERVER_PATH, self.ctx.jobserver.total());
 
         let mut base_env = HashMap::from([
             ("SOURCES_DIR", EXECENV_SOURCES_DIRECTORY_PATH),
@@ -262,6 +260,8 @@ impl<'a> ExecEnv<'a> {
                 .into_iter()
                 .chain(environment.iter().map(|(k, v)| (k.as_ref(), v.as_ref())))
                 .collect(),
+            isolate_network,
+            isolate_pid,
             stdin,
             stdout,
             stderr,
