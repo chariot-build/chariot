@@ -236,8 +236,8 @@ pub struct ExecOptions {
     #[arg(long, help = "isolate network namespace from host")]
     pub isolate_network: bool,
 
-    #[arg(long, help = "isolate PID namespace from host", default_value_t = true)]
-    pub isolate_pid: bool,
+    #[arg(long, help = "dont isolate PID namespace from host")]
+    pub no_isolate_pid: bool,
 
     #[arg(help = "script to execute")]
     pub command: String,
