@@ -1,6 +1,6 @@
 # Chariot
 
-Chariot is a meta-build system used for building bootstrapping operating systems written in rust.
+Chariot is a meta-build system written in Rust, used for building bootstrapping operating systems.
 
 ## Features
 - Zero runtime dependencies with a static binary
