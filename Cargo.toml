@@ -21,9 +21,9 @@ chariot_core = { path = "core" }
 chariot_rootfs = { path = "rootfs" }
 chariot_runtime = { path = "runtime" }
 chariot_util = { path = "util" }
-nix = "0.31.2"
+nix = "0.32.0"
 thiserror = "2.0.18"
 toml = "1.1.2"
 serde = "1.0.228"
-rusqlite = { version = "0.40.1", features = ["bundled"] }
+rusqlite = { version = "0.43.0", features = ["bundled"] }
 xxhash-rust = { version = "0.8.18", features = ["xxh3"] }

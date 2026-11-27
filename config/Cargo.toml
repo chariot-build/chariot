@@ -10,6 +10,6 @@ chariot_core.workspace = true
 chariot_util.workspace = true
 thiserror.workspace = true
 toml.workspace = true
-mlua = { version = "0.11.5", features = ["lua55", "vendored", "error-send"] }
+mlua = { version = "0.12.3", features = ["lua55", "vendored", "error-send"] }
 serde = { workspace = true, features = ["derive"] }
 xxhash-rust.workspace = true

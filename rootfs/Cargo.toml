@@ -18,4 +18,4 @@ thiserror.workspace = true
 toml.workspace = true
 url = "2.5.8"
 xz2 = "0.1.7"
-zstd = "0.13.3"
+zstd = "0.14.5"
