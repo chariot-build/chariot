@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io::Write,
     path::{Path, PathBuf},
 };
@@ -205,22 +205,32 @@ pub fn package_create(
     Ok(())
 }
 
-pub fn package_install(
+pub struct InstallablePackage<'a> {
+    pub name: &'a str,
+    pub version: &'a str,
+    pub revision: usize,
+    pub repo_dirs: Vec<PathBuf>,
+}
+
+pub fn packages_install(
     ctx: &CoreContext,
     pkgset: Option<&CachedPkgSet>,
-    name: &str,
-    version: &str,
-    revision: usize,
+    packages: &[InstallablePackage<'_>],
     arch: &str,
-    repo_dirs: Vec<PathBuf>,
     dest_dir: &Path,
     dest_root_overlay: bool,
     force: bool,
     logger: &mut dyn Write,
 ) -> Result<(), XBPSPackageInstallError> {
-    validate_package_name(name)?;
-    validate_package_version(version)?;
+    if packages.is_empty() {
+        return Ok(());
+    }
+
     validate_arch(arch)?;
+    for pkg in packages {
+        validate_package_name(pkg.name)?;
+        validate_package_version(pkg.version)?;
+    }
 
     let mountpoint_mount = Mount {
         dest: PathBuf::from("/chariot"),
@@ -228,6 +238,9 @@ pub fn package_install(
             fstype: String::from("tmpfs"),
         },
     };
+
+    let mut repo_dirs = packages.iter().flat_map(|pkg| pkg.repo_dirs.iter().cloned()).collect::<Vec<_>>();
+    repo_dirs.dedup();
 
     let repo_mounts = repo_dirs
         .into_iter()
@@ -276,36 +289,33 @@ pub fn package_install(
         false => None,
     };
 
+    let mut args = vec![
+        String::from("xbps-install"),
+        String::from("--reproducible"),
+        String::from("--yes"),
+        String::from("--ignore-file-conflicts"),
+        String::from("--rootdir"),
+        String::from(if dest_root_overlay { "/" } else { "/chariot/xbps/install" }),
+    ];
+    if force {
+        args.push(String::from("--force"));
+    }
+    for mnt in &repo_mounts {
+        args.push(String::from("--repository"));
+        args.push(mnt.dest.to_string_lossy().to_string());
+    }
+    args.extend(packages.iter().map(|pkg| format!("{}-{}_{}", pkg.name, pkg.version, pkg.revision)));
+
     let exit_code = ctx.rootfs.exec(
         "/",
         &mounts,
-        &HashMap::from([
-            ("XBPS_ARCH", "invalid"),
-            ("XBPS_TARGET_ARCH", arch),
-            ("PKG_NAME", name),
-            ("PKG_VER", version),
-            ("PKG_REV", revision.to_string().as_str()),
-        ]),
+        &HashMap::from([("XBPS_ARCH", "invalid"), ("XBPS_TARGET_ARCH", arch)]),
         false,
         true,
         false,
         Some(logger),
         StderrTarget::Merge,
-        vec![
-            "bash",
-            "-c",
-            format!(
-                "xbps-install --reproducible{} --yes --rootdir {} {} \"$PKG_NAME-${{PKG_VER}}_$PKG_REV\"",
-                if force { " --force" } else { "" },
-                if dest_root_overlay { "/" } else { "/chariot/xbps/install" },
-                repo_mounts
-                    .iter()
-                    .map(|mnt| format!("--repository {}", mnt.dest.display()))
-                    .collect::<Vec<_>>()
-                    .join(" "),
-            )
-            .as_str(),
-        ],
+        args,
         pkgset,
         overlay.is_none(),
         overlay,
@@ -317,4 +327,34 @@ pub fn package_install(
     }
 
     Ok(())
+}
+
+pub fn package_install(
+    ctx: &CoreContext,
+    pkgset: Option<&CachedPkgSet>,
+    name: &str,
+    version: &str,
+    revision: usize,
+    arch: &str,
+    repo_dirs: Vec<PathBuf>,
+    dest_dir: &Path,
+    dest_root_overlay: bool,
+    force: bool,
+    logger: &mut dyn Write,
+) -> Result<(), XBPSPackageInstallError> {
+    packages_install(
+        ctx,
+        pkgset,
+        &[InstallablePackage {
+            name,
+            version,
+            revision,
+            repo_dirs,
+        }],
+        arch,
+        dest_dir,
+        dest_root_overlay,
+        force,
+        logger,
+    )
 }

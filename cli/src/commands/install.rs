@@ -1,7 +1,10 @@
-use std::{io::stdout, path::PathBuf, sync::Arc, time::Duration};
+use std::{io::stdout, path::Path, sync::Arc, time::Duration};
 
 use anyhow::Result;
-use chariot_core::{config::package::PackagePlatform, xbps::package_install};
+use chariot_core::{
+    config::package::PackagePlatform,
+    xbps::{InstallablePackage, packages_install},
+};
 use chariot_util::fs::make_path;
 
 use crate::{
@@ -47,23 +50,31 @@ pub fn run(install_opts: InstallOptions, local_config: &CliConfig) -> Result<()>
 
     make_path(&install_opts.dest)?;
 
-    for selected_package in selected_packages {
-        let paths = manager.package_install_paths(selected_package);
+    // All selected packages share the requested platform, so they also share an architecture.
+    let arch = match selected_packages.first() {
+        Some(package) => package.get_arch(),
+        None => return Ok(()),
+    };
+    let installable_packages = selected_packages
+        .iter()
+        .map(|pkg| InstallablePackage {
+            name: &pkg.name,
+            version: &pkg.version,
+            revision: pkg.revision,
+            repo_dirs: manager.package_install_paths(pkg),
+        })
+        .collect::<Vec<_>>();
 
-        package_install(
-            &ctx,
-            None,
-            &selected_package.name,
-            &selected_package.version,
-            selected_package.revision,
-            selected_package.get_arch(),
-            paths,
-            &PathBuf::from(&install_opts.dest),
-            false,
-            install_opts.force,
-            &mut stdout(),
-        )?;
-    }
+    packages_install(
+        &ctx,
+        None,
+        &installable_packages,
+        arch,
+        Path::new(&install_opts.dest),
+        false,
+        install_opts.force,
+        &mut stdout(),
+    )?;
 
     if !local_config.disable_pruning {
         let live_hashes = cache.1.all_cached_hashes()?;
