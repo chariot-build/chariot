@@ -22,10 +22,11 @@ Types:
 
 - `cargo build --locked` and `cargo fmt` must pass clean.
 - `cargo clippy` warnings preferably fixed, not suppressed.
+- `cargo deny check licenses` must pass if you touched dependencies.
 
 ## Licensing
 
-Chariot is BSD-3-Clause. By contributing you agree your changes are licensed under the same terms. New third-party dependencies must have a compatible license (see the `accepted` list in `about.toml`) and `THIRD_PARTY_NOTICES.md` must be regenerated:
+Chariot is BSD-3-Clause. By contributing you agree your changes are licensed under the same terms. New third-party dependencies must have a compatible license (see the `accepted` list in `about.toml`, mirrored into the `allow` list in `deny.toml`; keep the two in sync) and `THIRD_PARTY_NOTICES.md` must be regenerated:
 
 ```
 cargo install cargo-about
