@@ -71,5 +71,8 @@ Running `chariot install --arch x86_64 --tool nasm /tmp/nasm` will trigger the p
 ## Documentation
 The previous sections should be enough to get started but if you are still unsure on how to proceed or just want to learn about more features chariot has check the documentation at [chariot-build.dev](https://chariot-build.dev)
 
+## Contributing
+Contribution guidelines can be founder under [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ## Licensing
 Chariot is licensed under BSD-3-Clause itself and discloses third party licenses of crates under [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
