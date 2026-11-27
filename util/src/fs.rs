@@ -210,22 +210,28 @@ pub fn copy_recursive(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<(
             source: err,
         })?;
 
-        copy_times(
-            &entry.metadata().map_err(|err| FileSystemError::Metadata {
-                path: entry.path(),
-                source: err,
-            })?,
-            &dest_path,
-        )?;
+        let meta = entry.metadata().map_err(|err| FileSystemError::Metadata {
+            path: entry.path(),
+            source: err,
+        })?;
+
+        set_permissions(&dest_path, meta.permissions()).map_err(|err| FileSystemError::SetPermissions {
+            path: dest_path.to_path_buf(),
+            source: err,
+        })?;
+        copy_times(&meta, &dest_path)?;
     }
 
-    copy_times(
-        &metadata(&src).map_err(|err| FileSystemError::Metadata {
-            path: src.as_ref().to_path_buf(),
-            source: err,
-        })?,
-        &dest,
-    )?;
+    let src_meta = metadata(&src).map_err(|err| FileSystemError::Metadata {
+        path: src.as_ref().to_path_buf(),
+        source: err,
+    })?;
+
+    set_permissions(&dest, src_meta.permissions()).map_err(|err| FileSystemError::SetPermissions {
+        path: dest.as_ref().to_path_buf(),
+        source: err,
+    })?;
+    copy_times(&src_meta, &dest)?;
 
     Ok(())
 }
