@@ -20,7 +20,7 @@ use crate::{
         source::Source,
     },
     workdir::WorkDirectory,
-    xbps::{InstallablePackage, XBPSPackageInstallError, packages_install},
+    xbps::{InstallablePackage, XBPSPackageInstallError, install_packages},
 };
 
 pub const EXECENV_SOURCE_DIRECTORY_PATH: &str = "/chariot/source";
@@ -78,7 +78,7 @@ impl<'a> ExecEnv<'a> {
                 .collect::<Vec<_>>();
 
             let mut logger = install_logger();
-            packages_install(
+            install_packages(
                 ctx,
                 None,
                 &installable_packages,
@@ -111,7 +111,7 @@ impl<'a> ExecEnv<'a> {
                 .collect::<Vec<_>>();
 
             let mut logger = install_logger();
-            packages_install(
+            install_packages(
                 ctx,
                 pkgset.as_deref(),
                 &installable_packages,

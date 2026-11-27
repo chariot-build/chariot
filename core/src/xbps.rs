@@ -212,7 +212,7 @@ pub struct InstallablePackage<'a> {
     pub repo_dirs: Vec<PathBuf>,
 }
 
-pub fn packages_install(
+pub fn install_packages(
     ctx: &CoreContext,
     pkgset: Option<&CachedPkgSet>,
     packages: &[InstallablePackage<'_>],

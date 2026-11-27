@@ -3,7 +3,7 @@ use std::{io::stdout, path::Path, sync::Arc, time::Duration};
 use anyhow::Result;
 use chariot_core::{
     config::package::PackagePlatform,
-    xbps::{InstallablePackage, packages_install},
+    xbps::{InstallablePackage, install_packages},
 };
 use chariot_util::fs::make_path;
 
@@ -65,7 +65,7 @@ pub fn run(install_opts: InstallOptions, local_config: &CliConfig) -> Result<()>
         })
         .collect::<Vec<_>>();
 
-    packages_install(
+    install_packages(
         &ctx,
         None,
         &installable_packages,
