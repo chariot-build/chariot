@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Build
+      run: cargo build --workspace --locked --all-targets
+
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Get Deps
+      run: rustup component add rustfmt
+
+    - name: Check Formatting
+      run: cargo fmt --all --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Get Deps
+      run: rustup component add clippy
+
+    - name: Lint
+      continue-on-error: true
+      run: |
+        cargo clippy --workspace --locked --all-targets --message-format short 2>&1 | tee clippy.log
+
+        lints="$(grep -E ': warning: ' clippy.log | sort -u)"
+        if [ -n "$lints" ]; then
+            total="$(printf '%s\n' "$lints" | wc -l)"
+            {
+                echo "### :warning: \`cargo clippy\` reported $total finding(s)"
+                echo
+                echo 'Advisory only, these do not fail CI. Preferably fix them before merging.'
+                echo
+                echo '```'
+                printf '%s\n' "$lints" | head -n 30
+                if [ "$total" -gt 30 ]; then
+                    echo "... and $((total - 30)) more."
+                fi
+                echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+        fi
