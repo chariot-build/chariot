@@ -238,6 +238,10 @@ pub fn eval_lua_config(
                             let url = base.get::<String>("url").context("`url` must be a string")?;
                             let revision = base.get::<String>("revision").context("`revision` must be a string")?;
 
+                            if revision.is_empty() {
+                                return Err(Error::runtime("`revision` must not be empty"));
+                            }
+
                             SourceBase::Git(GitSource { url, revision })
                         }
                         "local" => {
