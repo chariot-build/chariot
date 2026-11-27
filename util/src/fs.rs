@@ -2,7 +2,7 @@
 
 use std::{
     fs::{
-        DirEntry, File, copy, create_dir_all, exists, hard_link, metadata, read_dir, remove_dir, remove_file, rename, set_permissions,
+        DirEntry, File, Metadata, copy, create_dir_all, exists, hard_link, metadata, read_dir, remove_dir, remove_file, rename, set_permissions,
         symlink_metadata,
     },
     io::{self, BufReader, ErrorKind, Read},
@@ -10,7 +10,14 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
-use nix::libc::{S_IRWXG, S_IRWXO, S_IRWXU};
+use nix::{
+    fcntl::AT_FDCWD,
+    libc::{S_IRWXG, S_IRWXO, S_IRWXU},
+    sys::{
+        stat::{UtimensatFlags, utimensat},
+        time::TimeSpec,
+    },
+};
 use thiserror::Error;
 
 use crate::lock::FileLockError;
@@ -46,6 +53,9 @@ pub enum FileSystemError {
 
     #[error("Failed to set permissions `{}`", path.display())]
     SetPermissions { path: PathBuf, source: io::Error },
+
+    #[error("Failed to set timestamps of `{}`", path.display())]
+    SetTimes { path: PathBuf, source: io::Error },
 
     #[error("Failed to copy file from `{}` to `{}`", from.display(), to.display())]
     CopyFile { from: PathBuf, to: PathBuf, source: io::Error },
@@ -166,7 +176,19 @@ pub fn force_rm_contents(path: impl AsRef<Path>, exceptions: Option<Vec<&str>>) 
     Ok(())
 }
 
-pub fn copy_recursive(src: impl AsRef<std::path::Path>, dest: impl AsRef<std::path::Path>) -> Result<(), FileSystemError> {
+/// Copies the access and modification timestamps of `meta` onto `path`, without
+/// following symlinks.
+pub fn copy_times(meta: &Metadata, path: impl AsRef<Path>) -> Result<(), FileSystemError> {
+    let atime = TimeSpec::new(meta.atime(), meta.atime_nsec() as _);
+    let mtime = TimeSpec::new(meta.mtime(), meta.mtime_nsec() as _);
+
+    utimensat(AT_FDCWD, path.as_ref(), &atime, &mtime, UtimensatFlags::NoFollowSymlink).map_err(|err| FileSystemError::SetTimes {
+        path: path.as_ref().to_path_buf(),
+        source: err.into(),
+    })
+}
+
+pub fn copy_recursive(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> Result<(), FileSystemError> {
     create_dir_all(&dest).map_err(|err| FileSystemError::CreateDirAll {
         path: dest.as_ref().to_path_buf(),
         source: err,
@@ -181,14 +203,31 @@ pub fn copy_recursive(src: impl AsRef<std::path::Path>, dest: impl AsRef<std::pa
 
         if file_type.is_dir() {
             copy_recursive(entry.path(), dest_path)?;
-        } else {
-            copy(entry.path(), &dest_path).map_err(|err| FileSystemError::CopyFile {
-                from: entry.path(),
-                to: dest_path,
-                source: err,
-            })?;
+            continue;
         }
+
+        copy(entry.path(), &dest_path).map_err(|err| FileSystemError::CopyFile {
+            from: entry.path(),
+            to: dest_path.clone(),
+            source: err,
+        })?;
+
+        copy_times(
+            &entry.metadata().map_err(|err| FileSystemError::Metadata {
+                path: entry.path(),
+                source: err,
+            })?,
+            &dest_path,
+        )?;
     }
+
+    copy_times(
+        &metadata(&src).map_err(|err| FileSystemError::Metadata {
+            path: src.as_ref().to_path_buf(),
+            source: err,
+        })?,
+        &dest,
+    )?;
 
     Ok(())
 }
