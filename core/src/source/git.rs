@@ -23,7 +23,7 @@ pub enum GitFetchError {
     #[error("Git fetch failed")]
     Fetch,
 
-    #[error("Git revision is a branch")]
+    #[error("Git revision is a HEAD (branch)")]
     RefIsHead,
 
     #[error("Git checkout failed for source")]
@@ -31,6 +31,10 @@ pub enum GitFetchError {
 }
 
 pub fn fetch_git_repository(ctx: &CoreContext, logger: &mut dyn Write, git_source: &GitSource) -> Result<WorkDirectory, GitFetchError> {
+    if git_source.revision.is_empty() {
+        return Err(GitFetchError::RefIsHead);
+    }
+
     let mountpoint_bind = Mount {
         dest: PathBuf::from("/chariot"),
         kind: MountKind::FS {
