@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap},
+    collections::HashMap,
     io::Write,
     path::{Path, PathBuf},
 };
@@ -327,34 +327,4 @@ pub fn packages_install(
     }
 
     Ok(())
-}
-
-pub fn package_install(
-    ctx: &CoreContext,
-    pkgset: Option<&CachedPkgSet>,
-    name: &str,
-    version: &str,
-    revision: usize,
-    arch: &str,
-    repo_dirs: Vec<PathBuf>,
-    dest_dir: &Path,
-    dest_root_overlay: bool,
-    force: bool,
-    logger: &mut dyn Write,
-) -> Result<(), XBPSPackageInstallError> {
-    packages_install(
-        ctx,
-        pkgset,
-        &[InstallablePackage {
-            name,
-            version,
-            revision,
-            repo_dirs,
-        }],
-        arch,
-        dest_dir,
-        dest_root_overlay,
-        force,
-        logger,
-    )
 }

@@ -20,7 +20,7 @@ use crate::{
         source::Source,
     },
     workdir::WorkDirectory,
-    xbps::{XBPSPackageInstallError, package_install},
+    xbps::{InstallablePackage, XBPSPackageInstallError, packages_install},
 };
 
 pub const EXECENV_SOURCE_DIRECTORY_PATH: &str = "/chariot/source";
@@ -33,10 +33,10 @@ pub enum CreateExecEnvError {
     #[error(transparent)]
     FileSystem(#[from] FileSystemError),
 
-    #[error("Failed to install {} package `{}`", platform.to_string(), name)]
+    #[error("Failed to install {} packages `{}`", platform.to_string(), names.join(", "))]
     PackageInstall {
         platform: PackagePlatform,
-        name: String,
+        names: Vec<String>,
         source: XBPSPackageInstallError,
     },
 }
@@ -65,17 +65,24 @@ impl<'a> ExecEnv<'a> {
         root_rw_overlay: Option<OverlayUpperDirectory>,
     ) -> Result<ExecEnv<'a>, CreateExecEnvError> {
         let sysroot = WorkDirectory::create(&ctx.workdir_parent)?;
-        for (pkg, paths) in target_packages {
-            assert!(pkg.platform == PackagePlatform::Target);
+        if !target_packages.is_empty() {
+            assert!(target_packages.iter().all(|(pkg, _)| pkg.platform == PackagePlatform::Target));
+            let installable_packages = target_packages
+                .iter()
+                .map(|(pkg, paths)| InstallablePackage {
+                    name: &pkg.name,
+                    version: &pkg.version,
+                    revision: pkg.revision,
+                    repo_dirs: paths.clone(),
+                })
+                .collect::<Vec<_>>();
+
             let mut logger = install_logger();
-            package_install(
+            packages_install(
                 ctx,
                 None,
-                &pkg.name,
-                &pkg.version,
-                pkg.revision,
-                &pkg.global_env.target_arch,
-                paths.clone(),
+                &installable_packages,
+                target_packages[0].0.get_arch(),
                 &sysroot.path(),
                 false,
                 false,
@@ -83,7 +90,7 @@ impl<'a> ExecEnv<'a> {
             )
             .map_err(|err| CreateExecEnvError::PackageInstall {
                 platform: PackagePlatform::Target,
-                name: pkg.name.clone(),
+                names: target_packages.iter().map(|(pkg, _)| pkg.name.clone()).collect(),
                 source: err,
             })?;
         }
@@ -91,29 +98,34 @@ impl<'a> ExecEnv<'a> {
         let tool_overlay = if host_tools.is_empty() {
             None
         } else {
+            assert!(host_tools.iter().all(|(tool, _)| tool.platform == PackagePlatform::Host));
             let tool_overlay_workdir = WorkDirectory::create(&ctx.workdir_parent)?;
-            for (tool, paths) in host_tools {
-                assert!(tool.platform == PackagePlatform::Host);
-                let mut logger = install_logger();
-                package_install(
-                    ctx,
-                    pkgset.as_deref(),
-                    &tool.name,
-                    &tool.version,
-                    tool.revision,
-                    HOST_ARCH,
-                    paths.clone(),
-                    &tool_overlay_workdir.path(),
-                    true,
-                    false,
-                    &mut logger,
-                )
-                .map_err(|err| CreateExecEnvError::PackageInstall {
-                    platform: PackagePlatform::Host,
-                    name: tool.name.clone(),
-                    source: err,
-                })?;
-            }
+            let installable_packages = host_tools
+                .iter()
+                .map(|(tool, paths)| InstallablePackage {
+                    name: &tool.name,
+                    version: &tool.version,
+                    revision: tool.revision,
+                    repo_dirs: paths.clone(),
+                })
+                .collect::<Vec<_>>();
+
+            let mut logger = install_logger();
+            packages_install(
+                ctx,
+                pkgset.as_deref(),
+                &installable_packages,
+                HOST_ARCH,
+                &tool_overlay_workdir.path(),
+                true,
+                false,
+                &mut logger,
+            )
+            .map_err(|err| CreateExecEnvError::PackageInstall {
+                platform: PackagePlatform::Host,
+                names: host_tools.iter().map(|(tool, _)| tool.name.clone()).collect(),
+                source: err,
+            })?;
             Some(tool_overlay_workdir)
         };
 
