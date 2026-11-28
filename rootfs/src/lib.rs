@@ -555,7 +555,7 @@ impl RootFS {
 
         let mut lower_directories = root_overlays;
         if let Some(pkgset) = pkgset {
-            assert!(pkgset.rootfs.path == self.path);
+            assert!(Arc::ptr_eq(self, &pkgset.rootfs));
 
             lower_directories.push(pkgset.path());
 
