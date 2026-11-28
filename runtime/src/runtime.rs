@@ -78,7 +78,7 @@ pub(super) fn runtime_execute_bare(
                     status => return Err(RuntimeError::InvalidWaitStatus { status }),
                 }
 
-                let n = poll(&mut poll_fds, 300_u16).map_err(|errno| RuntimeError::Poll { errno })?;
+                let n = poll(&mut poll_fds, 10_u16).map_err(|errno| RuntimeError::Poll { errno })?;
                 if n == 0 {
                     continue;
                 }
