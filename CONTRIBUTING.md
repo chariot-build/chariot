@@ -11,6 +11,8 @@ Types:
 - `fix`: bug fix
 - `refactor`: internal restructuring, no behavior change
 - `chore`: deps, licensing, CI, repo housekeeping. essentially anything that does not touch code
+- `perf`: improves performance, no behavior change
+- `docs`: documentation only change
 
 ## Workflow
 
